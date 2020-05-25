@@ -1,6 +1,6 @@
 # Oak Middleware JWT
 
-![ci](https://github.com/halvardssm/ms-auth/workflows/ci/badge.svg)
+![CI](https://github.com/halvardssm/oak-middleware-jwt/workflows/CI/badge.svg)
 [![(Deno)](https://img.shields.io/badge/deno-1.0.2-green.svg)](https://deno.land)
 
 Oak middleware for JWT
@@ -10,7 +10,7 @@ Oak middleware for JWT
 * As an application middleware
 
   ```ts
-  import {jwtMiddlewareApplication} from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
+  import { jwtMiddlewareApplication } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
   
   const app = new Application();
   
@@ -22,7 +22,7 @@ Oak middleware for JWT
 * As a router middleware
 
   ```ts
-  import {jwtMiddlewareRouter} from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
+  import { jwtMiddlewareRouter } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
   
   interface ApplicationState {
     userId: string
@@ -37,7 +37,7 @@ Oak middleware for JWT
   }
   
   router
-    .get("/bar", jwtMiddlewareRouter({secret:"foo",decryptedTokenHandler}), async (ctx) => {
+    .get("/bar", jwtMiddlewareRouter({ secret:"foo", decryptedTokenHandler }), async (ctx) => {
       const callerId = ctx.state.userId
       ...
     })
