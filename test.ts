@@ -9,7 +9,7 @@ import {
   RouterContext,
   setExpiration,
 } from "./deps.ts";
-import { jwtMiddlewareApplication } from "./mod.ts";
+import { jwtMiddleware } from "./mod.ts";
 
 const SECRET = "some-secret";
 const header: Jose = {
@@ -51,7 +51,7 @@ const tests = [
 
       const mockJwt = makeJwt({ key: SECRET, header, payload: payload() });
 
-      const mw = jwtMiddlewareApplication(
+      const mw = jwtMiddleware(
         {
           secret: SECRET,
           decryptedTokenHandler: (ctx, jwt) => {
@@ -74,7 +74,7 @@ const tests = [
 
       const mockJwt = makeJwt({ key: SECRET, header, payload: pl });
 
-      const mw = jwtMiddlewareApplication(
+      const mw = jwtMiddleware(
         {
           secret: SECRET,
           isThrowing: false,
@@ -92,7 +92,7 @@ const tests = [
   {
     name: "No header",
     async fn() {
-      const mw = jwtMiddlewareApplication(
+      const mw = jwtMiddleware(
         {
           secret: SECRET,
           isThrowing: false,
@@ -109,7 +109,7 @@ const tests = [
   {
     name: "Invalid header",
     async fn() {
-      const mw = jwtMiddlewareApplication(
+      const mw = jwtMiddleware(
         {
           secret: SECRET,
           isThrowing: false,
@@ -126,7 +126,7 @@ const tests = [
   {
     name: "Invalid token",
     async fn() {
-      const mw = jwtMiddlewareApplication(
+      const mw = jwtMiddleware(
         {
           secret: SECRET,
           isThrowing: false,
