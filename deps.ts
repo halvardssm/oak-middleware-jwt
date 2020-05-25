@@ -22,4 +22,7 @@ export {
   RouterContext,
   RouterMiddleware,
 } from "https://deno.land/x/oak@v4.0.0/mod.ts";
-export { ErrorStatus } from "https://deno.land/x/oak@v4.0.0/types.ts";
+export {
+  ErrorStatus,
+  HTTPMethods,
+} from "https://deno.land/x/oak@v4.0.0/types.ts";

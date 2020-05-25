@@ -8,6 +8,7 @@ import {
   Payload,
   RouterContext,
   setExpiration,
+  HTTPMethods,
 } from "./deps.ts";
 import { jwtMiddleware } from "./mod.ts";
 
@@ -29,6 +30,8 @@ const mockContext = (token?: string): RouterContext =>
       headers: new Headers(
         token ? { "Authorization": `Bearer ${token}` } : undefined,
       ),
+      url: new URL("http://foo.bar/baz"),
+      method: "GET",
     },
     throw: (status: number, msg: string) => {
       throw createHttpError(status, msg);
@@ -144,6 +147,82 @@ const tests = [
         undefined,
         "Authentication failed",
       );
+    },
+  },
+  {
+    name: "Pattern ignore string",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: ["/baz"],
+      });
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
+    },
+  },
+  {
+    name: "Pattern ignore regex",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: [/baz/],
+      });
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
+    },
+  },
+  {
+    name: "Pattern ignore object string",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: [{ path: "/baz" }],
+      });
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
+    },
+  },
+  {
+    name: "Pattern ignore object regex",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: [{ path: /baz/ }],
+      });
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
+    },
+  },
+  {
+    name: "Pattern ignore object string wrong method",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
+      });
+
+      assertThrowsAsync(async () => await mw(mockContext(), mockNext));
+    },
+  },
+  {
+    name: "Pattern ignore object string correct method",
+    async fn() {
+      const mw = jwtMiddleware({
+        secret: SECRET,
+        ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
+      });
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
     },
   },
 ];

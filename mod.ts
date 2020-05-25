@@ -1,6 +1,7 @@
 export {
   jwtMiddleware,
-  JwtMiddlewareOptions,
+  jwtMiddlewareOptions,
   customMessagesT,
-  MiddlewareOptions,
+  patternT,
+  ignorePathT,
 } from "./src/jwtMiddleware.ts";

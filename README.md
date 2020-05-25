@@ -55,6 +55,7 @@ Oak middleware for JWT
 * critHandlers?: Handlers; // see djwt
 * customMessages?: customMessagesT; // Custom error messages
 * expiresAfter?: number; // Duration for expiration, uses iat to determine if the token is expired. E.g. (1000*60*60) = 1 hour expiration time
+* ignorePatterns?: Array<ignorePathT>; // Pattern to ignore e.g. `/authenticate`, when passing a string, the string will be matched with the path `===`
 
 ## Contributing
 
