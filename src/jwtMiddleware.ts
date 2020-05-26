@@ -17,18 +17,35 @@ export type customMessagesT = {
 export type patternT = { path: string | RegExp; methods?: HTTPMethods[] };
 export type ignorePathT = string | RegExp | patternT;
 
-export type jwtMiddlewareOptions = {
-  secret: string; // Secret key
-  decryptedTokenHandler?: (
+export interface jwtMiddlewareOptions extends Partial<Opts> {
+  /** Secret key */
+  secret: string;
+
+  /** Custom error messages */
+  customMessages?: customMessagesT;
+
+  /** Duration for expiration, uses iat to determine if the token is expired. E.g. (1000*60*60) = 1 hour expiration time */
+  expiresAfter?: number;
+
+  /** Pattern to ignore e.g. `/authenticate`, when passing a string, the string will be matched with the path `===` */
+  ignorePatterns?: Array<ignorePathT>;
+
+  /** Optional callback for successfull validation, passes the Context and the decrypted JWT as an object */
+  onSuccess?: (
     ctx: Context | RouterContext,
     jwtObject: JwtObject,
-  ) => void; // Callback for decrypted token
-  isThrowing?: boolean; // True if you want the throw message from djwt, False, if you prefer custom messages (uses ctx.throw()). Default true, recommended false
-  critHandlers?: Handlers; // see djwt
-  customMessages?: customMessagesT; // Custom error messages
-  expiresAfter?: number; // Duration for expiration, uses iat to determine if the token is expired. E.g. (1000*60*60) = 1 hour expiration time
-  ignorePatterns?: Array<ignorePathT>; // Pattern to ignore e.g. `/authenticate`, when passing a string, the string will be matched with the path `===`
-};
+  ) => void;
+
+  /** Optional callback for unsuccessfull validation, passes the Context and isExpired.
+	 * 
+	 * When not used, will throw HTTPError using custom (or default) messages.
+	 * If you want the failure to be ignored and to call the next middleware, return true.
+	 */
+  onFailure?: (
+    ctx: Context | RouterContext,
+    isExpired: boolean,
+  ) => boolean; //
+}
 
 const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
@@ -38,6 +55,7 @@ const ignorePath = <T extends Context | RouterContext>(
     typeof pattern === "string" && pattern === ctx.request.url.pathname;
   const testRegExp = (pattern: any) =>
     pattern instanceof RegExp && pattern.test(ctx.request.url.pathname);
+
   for (const pattern of patterns) {
     if (
       testString(pattern) ||
@@ -64,9 +82,10 @@ export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
 >({
   secret,
-  isThrowing = true,
+  isThrowing = false,
   critHandlers,
-  decryptedTokenHandler,
+  onSuccess,
+  onFailure,
   customMessages,
   expiresAfter,
   ignorePatterns,
@@ -78,10 +97,11 @@ export const jwtMiddleware = <
 
       if (ctx.request.headers.has("Authorization")) {
         const authHeader = ctx.request.headers.get("Authorization")!;
+
         if (authHeader.startsWith("Bearer ") && authHeader.length > 7) {
           const token = authHeader.slice(7);
-
           const jwtOptions: Opts = { isThrowing };
+
           if (critHandlers) jwtOptions.critHandlers = critHandlers;
 
           const decryptedToken = await validateJwt(
@@ -100,20 +120,26 @@ export const jwtMiddleware = <
               isExpired = true;
             } else {
               isUnauthorized = false;
-              decryptedTokenHandler &&
-                decryptedTokenHandler(ctx, decryptedToken);
+              onSuccess &&
+                onSuccess(ctx, decryptedToken);
             }
           }
         }
       }
 
       if (isUnauthorized) {
-        ctx.throw(
-          ErrorStatus.Unauthorized,
-          isExpired
-            ? (customMessages?.expired ?? "Token expired")
-            : (customMessages?.invalid ?? "Authentication failed"),
-        );
+        if (onFailure) {
+          const ignoreFailure = onFailure(ctx, isExpired);
+
+          if (!ignoreFailure) return;
+        } else {
+          ctx.throw(
+            ErrorStatus.Unauthorized,
+            isExpired
+              ? (customMessages?.expired ?? "Token expired")
+              : (customMessages?.invalid ?? "Authentication failed"),
+          );
+        }
       }
     }
 

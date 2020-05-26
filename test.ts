@@ -57,7 +57,7 @@ const tests = [
       const mw = jwtMiddleware(
         {
           secret: SECRET,
-          decryptedTokenHandler: (ctx, jwt) => {
+          onSuccess: (ctx, jwt) => {
             jwtObj = jwt;
           },
         },
