@@ -11,10 +11,11 @@ Oak middleware for JWT
 
   ```ts
   import { jwtMiddlewareApplication } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
-  
+  import { Middleware } from "https://deno.land/x/oak/mod.ts";
+
   const app = new Application();
   
-  app.use(jwtMiddlewareApplication({secret:"foo"}));
+  app.use(jwtMiddlewareApplication<Middleware>({secret:"foo"}));
   
   await app.listen(appOptions);
   ```
@@ -23,6 +24,7 @@ Oak middleware for JWT
 
   ```ts
   import { jwtMiddlewareRouter } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
+  import { RouterMiddleware } from "https://deno.land/x/oak/mod.ts";
   
   interface ApplicationState {
     userId: string
@@ -37,7 +39,7 @@ Oak middleware for JWT
   }
   
   router
-    .get("/bar", jwtMiddlewareRouter({ secret:"foo", decryptedTokenHandler }), async (ctx) => {
+    .get("/bar", jwtMiddlewareRouter<RouterMiddleware>({ secret:"foo", decryptedTokenHandler }), async (ctx) => {
       const callerId = ctx.state.userId
       ...
     })
