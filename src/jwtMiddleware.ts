@@ -1,7 +1,6 @@
 import {
   Context,
   ErrorStatus,
-  Handlers,
   JwtObject,
   Middleware,
   Opts,
@@ -10,25 +9,24 @@ import {
   validateJwt,
   HTTPMethods,
 } from "../deps.ts";
-export type customMessagesT = {
-  expired?: string; // Message for when the token is expired, uses iat to determine
-  invalid?: string; // Message for when the token is invalid
-};
-export type patternT = { path: string | RegExp; methods?: HTTPMethods[] };
-export type ignorePathT = string | RegExp | patternT;
 
-export interface jwtMiddlewareOptions extends Partial<Opts> {
+export type PatternT = { path: string | RegExp; methods?: HTTPMethods[] };
+export type IgnorePathT = string | RegExp | PatternT;
+export type ErrorMessagesKeys = "ERROR_TOKEN_EXPIRED" | "ERROR_INVALID_AUTH"
+export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
+
+export interface JwtMiddlewareOptions extends Partial<Opts> {
   /** Secret key */
   secret: string;
 
   /** Custom error messages */
-  customMessages?: customMessagesT;
+  customMessages?: ErrorMessages;
 
   /** Duration for expiration, uses iat to determine if the token is expired. E.g. (1000*60*60) = 1 hour expiration time */
   expiresAfter?: number;
 
   /** Pattern to ignore e.g. `/authenticate`, when passing a string, the string will be matched with the path `===` */
-  ignorePatterns?: Array<ignorePathT>;
+  ignorePatterns?: Array<IgnorePathT>;
 
   /** Optional callback for successfull validation, passes the Context and the decrypted JWT as an object */
   onSuccess?: (
@@ -47,9 +45,14 @@ export interface jwtMiddlewareOptions extends Partial<Opts> {
   ) => boolean; //
 }
 
+export const errorMessages: ErrorMessages = {
+  ERROR_TOKEN_EXPIRED: "Token expired",
+  ERROR_INVALID_AUTH: "Authentication failed"
+}
+
 const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
-  patterns: Array<ignorePathT>,
+  patterns: Array<IgnorePathT>,
 ): boolean => {
   const testString = (pattern: any) =>
     typeof pattern === "string" && pattern === ctx.request.url.pathname;
@@ -63,11 +66,11 @@ const ignorePath = <T extends Context | RouterContext>(
       (
         typeof pattern === "object" &&
         (
-          testString((pattern as patternT).path) ||
-          testRegExp((pattern as patternT).path)
+          testString((pattern as PatternT).path) ||
+          testRegExp((pattern as PatternT).path)
         ) && (
-          !(pattern as patternT).methods ||
-          (pattern as patternT).methods?.includes(ctx.request.method)
+          !(pattern as PatternT).methods ||
+          (pattern as PatternT).methods?.includes(ctx.request.method)
         )
       )
     ) {
@@ -80,16 +83,17 @@ const ignorePath = <T extends Context | RouterContext>(
 
 export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
->({
-  secret,
-  isThrowing = false,
-  critHandlers,
-  onSuccess,
-  onFailure,
-  customMessages,
-  expiresAfter,
-  ignorePatterns,
-}: jwtMiddlewareOptions): T => {
+  >({
+    secret,
+    isThrowing = false,
+    critHandlers,
+    onSuccess,
+    onFailure,
+    customMessages = {},
+    expiresAfter,
+    ignorePatterns,
+  }: JwtMiddlewareOptions): T => {
+  Object.assign(customMessages, errorMessages)
   const core: RouterMiddleware = async (ctx, next) => {
     if (!ignorePatterns || !ignorePath(ctx, ignorePatterns)) {
       let isUnauthorized = true;
@@ -103,7 +107,6 @@ export const jwtMiddleware = <
           const jwtOptions: Opts = { isThrowing };
 
           if (critHandlers) jwtOptions.critHandlers = critHandlers;
-
           const decryptedToken = await validateJwt(
             token,
             secret,
@@ -115,7 +118,7 @@ export const jwtMiddleware = <
               expiresAfter &&
               decryptedToken.payload?.iat &&
               decryptedToken.payload?.iat <
-                (new Date().getTime() - (expiresAfter || 0))
+              (new Date().getTime() - (expiresAfter || 0))
             ) {
               isExpired = true;
             } else {
@@ -136,8 +139,8 @@ export const jwtMiddleware = <
           ctx.throw(
             ErrorStatus.Unauthorized,
             isExpired
-              ? (customMessages?.expired ?? "Token expired")
-              : (customMessages?.invalid ?? "Authentication failed"),
+              ? (customMessages?.ERROR_TOKEN_EXPIRED)
+              : (customMessages?.ERROR_INVALID_AUTH),
           );
         }
       }
