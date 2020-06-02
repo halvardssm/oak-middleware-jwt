@@ -2,6 +2,7 @@
 
 ![CI](https://github.com/halvardssm/oak-middleware-jwt/workflows/CI/badge.svg)
 [![(Deno)](https://img.shields.io/badge/deno-1.0.2-green.svg)](https://deno.land)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts)
 
 Oak middleware for JWT
 
