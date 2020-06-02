@@ -12,7 +12,7 @@ import {
 
 export type PatternT = { path: string | RegExp; methods?: HTTPMethods[] };
 export type IgnorePathT = string | RegExp | PatternT;
-export type ErrorMessagesKeys = "ERROR_TOKEN_EXPIRED" | "ERROR_INVALID_AUTH"
+export type ErrorMessagesKeys = "ERROR_TOKEN_EXPIRED" | "ERROR_INVALID_AUTH";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
 
 export interface JwtMiddlewareOptions extends Partial<Opts> {
@@ -47,8 +47,8 @@ export interface JwtMiddlewareOptions extends Partial<Opts> {
 
 export const errorMessages: ErrorMessages = {
   ERROR_TOKEN_EXPIRED: "Token expired",
-  ERROR_INVALID_AUTH: "Authentication failed"
-}
+  ERROR_INVALID_AUTH: "Authentication failed",
+};
 
 const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
@@ -83,17 +83,17 @@ const ignorePath = <T extends Context | RouterContext>(
 
 export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
-  >({
-    secret,
-    isThrowing = false,
-    critHandlers,
-    onSuccess,
-    onFailure,
-    customMessages = {},
-    expiresAfter,
-    ignorePatterns,
-  }: JwtMiddlewareOptions): T => {
-  Object.assign(customMessages, errorMessages)
+>({
+  secret,
+  isThrowing = false,
+  critHandlers,
+  onSuccess,
+  onFailure,
+  customMessages = {},
+  expiresAfter,
+  ignorePatterns,
+}: JwtMiddlewareOptions): T => {
+  Object.assign(customMessages, errorMessages);
   const core: RouterMiddleware = async (ctx, next) => {
     if (!ignorePatterns || !ignorePath(ctx, ignorePatterns)) {
       let isUnauthorized = true;
@@ -118,7 +118,7 @@ export const jwtMiddleware = <
               expiresAfter &&
               decryptedToken.payload?.iat &&
               decryptedToken.payload?.iat <
-              (new Date().getTime() - (expiresAfter || 0))
+                (new Date().getTime() - (expiresAfter || 0))
             ) {
               isExpired = true;
             } else {
