@@ -15,14 +15,12 @@ export {
   setExpiration,
   Algorithm,
 } from "https://deno.land/x/djwt@v1.0/create.ts";
-export { createHttpError } from "https://deno.land/x/oak@v4.0.0/httpError.ts";
+export { createHttpError } from "https://deno.land/x/oak@v6.0.1/httpError.ts";
 export {
   Context,
   Middleware,
   RouterContext,
   RouterMiddleware,
-} from "https://deno.land/x/oak@v4.0.0/mod.ts";
-export {
-  ErrorStatus,
   HTTPMethods,
-} from "https://deno.land/x/oak@v4.0.0/types.ts";
+  Status,
+} from "https://deno.land/x/oak@v6.0.1/mod.ts";

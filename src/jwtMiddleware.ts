@@ -1,6 +1,5 @@
 import {
   Context,
-  ErrorStatus,
   JwtValidation,
   Middleware,
   Validation,
@@ -9,6 +8,7 @@ import {
   validateJwt,
   HTTPMethods,
   Algorithm,
+  Status,
 } from "../deps.ts";
 
 export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
@@ -127,7 +127,7 @@ export const jwtMiddleware = <
           if (!ignoreFailure) return;
         } else {
           ctx.throw(
-            ErrorStatus.Unauthorized,
+            Status.Unauthorized,
             customMessages?.ERROR_INVALID_AUTH,
           );
         }
