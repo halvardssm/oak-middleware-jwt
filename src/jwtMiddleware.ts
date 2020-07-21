@@ -15,11 +15,16 @@ export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
 export type IgnorePath = string | RegExp | Pattern;
 export type ErrorMessagesKeys = "ERROR_INVALID_AUTH";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
+export type OnSuccessHandler = (
+  ctx: Context | RouterContext,
+  jwtValidation: JwtValidation,
+) => void;
+export type OnFailureHandler = (
+  ctx: Context | RouterContext,
+  jwtValidation?: JwtValidation,
+) => boolean;
 
 export interface JwtMiddlewareOptions extends Partial<Validation> {
-  key: string;
-  algorithm: Algorithm | Algorithm[];
-
   /** Custom error messages */
   customMessages?: ErrorMessages;
 
@@ -30,20 +35,18 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
   ignorePatterns?: Array<IgnorePath>;
 
   /** Optional callback for successfull validation, passes the Context and the JwtValidation object */
-  onSuccess?: (
-    ctx: Context | RouterContext,
-    jwtValidation: JwtValidation,
-  ) => void;
+  onSuccess?: OnSuccessHandler;
 
   /** Optional callback for unsuccessfull validation, passes the Context and JwtValidation if the JWT is present in the header.
 	 * 
 	 * When not used, will throw HTTPError using custom (or default) messages.
 	 * If you want the failure to be ignored and to call the next middleware, return true.
 	 */
-  onFailure?: (
-    ctx: Context | RouterContext,
-    jwtValidation?: JwtValidation,
-  ) => boolean; //
+  onFailure?: OnFailureHandler;
+
+  /** See the djwt module for Validation options */
+  key: string;
+  algorithm: Algorithm | Algorithm[];
 }
 
 export const errorMessages: ErrorMessages = {
