@@ -2,7 +2,7 @@
 
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/halvardssm/oak-middleware-jwt/CI/master?style=flat-square&logo=github)](https://github.com/halvardssm/oak-middleware-jwt/actions?query=branch%3Amaster+workflow%3ACI)
 [![(Deno)](https://img.shields.io/badge/deno-v1.2.0-green.svg?style=flat-square&logo=deno)](https://deno.land)
-[![(Deno)](https://img.shields.io/badge/oak-v6.0.1-orange.svg?style=flat-square&logo=deno)](https://deno.land)
+[![(Deno)](https://img.shields.io/badge/oak-v6.0.1-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
 [![deno doc](https://img.shields.io/badge/deno-doc-blue.svg?style=flat-square&logo=deno)](https://doc.deno.land/https/raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts)
 
 Oak middleware for JWT
