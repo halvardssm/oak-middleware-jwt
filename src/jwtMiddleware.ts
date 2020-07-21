@@ -1,58 +1,62 @@
 import {
   Context,
   ErrorStatus,
-  JwtObject,
+  JwtValidation,
   Middleware,
-  Opts,
+  Validation,
   RouterContext,
   RouterMiddleware,
   validateJwt,
   HTTPMethods,
+  Algorithm,
 } from "../deps.ts";
 
-export type PatternT = { path: string | RegExp; methods?: HTTPMethods[] };
-export type IgnorePathT = string | RegExp | PatternT;
-export type ErrorMessagesKeys = "ERROR_TOKEN_EXPIRED" | "ERROR_INVALID_AUTH";
+export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
+export type IgnorePath = string | RegExp | Pattern;
+export type ErrorMessagesKeys = "ERROR_INVALID_AUTH";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
 
-export interface JwtMiddlewareOptions extends Partial<Opts> {
-  /** Secret key */
-  secret: string;
+export interface JwtMiddlewareOptions extends Partial<Validation> {
+  key: string;
+  algorithm: Algorithm | Algorithm[];
 
   /** Custom error messages */
   customMessages?: ErrorMessages;
 
-  /** Duration for expiration, uses iat to determine if the token is expired. E.g. (1000*60*60) = 1 hour expiration time */
-  expiresAfter?: number;
+  /** Pattern to ignore e.g. `/authenticate`, can be a RegExp, Pattern object or string.
+   * 
+   * When passing a string, the string will be matched with the path `===`.
+   */
+  ignorePatterns?: Array<IgnorePath>;
 
-  /** Pattern to ignore e.g. `/authenticate`, when passing a string, the string will be matched with the path `===` */
-  ignorePatterns?: Array<IgnorePathT>;
-
-  /** Optional callback for successfull validation, passes the Context and the decrypted JWT as an object */
+  /** Optional callback for successfull validation, passes the Context and the JwtValidation object */
   onSuccess?: (
     ctx: Context | RouterContext,
-    jwtObject: JwtObject,
+    jwtValidation: JwtValidation,
   ) => void;
 
-  /** Optional callback for unsuccessfull validation, passes the Context and isExpired.
+  /** Optional callback for unsuccessfull validation, passes the Context and JwtValidation if the JWT is present in the header.
 	 * 
 	 * When not used, will throw HTTPError using custom (or default) messages.
 	 * If you want the failure to be ignored and to call the next middleware, return true.
 	 */
   onFailure?: (
     ctx: Context | RouterContext,
-    isExpired: boolean,
+    jwtValidation?: JwtValidation,
   ) => boolean; //
 }
 
 export const errorMessages: ErrorMessages = {
-  ERROR_TOKEN_EXPIRED: "Token expired",
   ERROR_INVALID_AUTH: "Authentication failed",
+};
+
+const isPattern = (obj: any): obj is Pattern => {
+  return typeof obj === "object" && obj.path;
 };
 
 const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
-  patterns: Array<IgnorePathT>,
+  patterns: Array<IgnorePath>,
 ): boolean => {
   const testString = (pattern: any) =>
     typeof pattern === "string" && pattern === ctx.request.url.pathname;
@@ -64,14 +68,9 @@ const ignorePath = <T extends Context | RouterContext>(
       testString(pattern) ||
       testRegExp(pattern) ||
       (
-        typeof pattern === "object" &&
-        (
-          testString((pattern as PatternT).path) ||
-          testRegExp((pattern as PatternT).path)
-        ) && (
-          !(pattern as PatternT).methods ||
-          (pattern as PatternT).methods?.includes(ctx.request.method)
-        )
+        isPattern(pattern) &&
+        (testString(pattern.path) || testRegExp(pattern.path)) &&
+        (!pattern.methods || pattern.methods?.includes(ctx.request.method))
       )
     ) {
       return true;
@@ -84,63 +83,49 @@ const ignorePath = <T extends Context | RouterContext>(
 export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
 >({
-  secret,
-  isThrowing = false,
+  key,
+  algorithm,
   critHandlers,
+  customMessages = {},
+  ignorePatterns,
   onSuccess,
   onFailure,
-  customMessages = {},
-  expiresAfter,
-  ignorePatterns,
 }: JwtMiddlewareOptions): T => {
   Object.assign(customMessages, errorMessages);
+
   const core: RouterMiddleware = async (ctx, next) => {
     if (!ignorePatterns || !ignorePath(ctx, ignorePatterns)) {
       let isUnauthorized = true;
-      let isExpired = false;
-
+      let validatedJwt;
       if (ctx.request.headers.has("Authorization")) {
         const authHeader = ctx.request.headers.get("Authorization")!;
 
         if (authHeader.startsWith("Bearer ") && authHeader.length > 7) {
-          const token = authHeader.slice(7);
-          const jwtOptions: Opts = { isThrowing };
+          const jwt = authHeader.slice(7);
 
-          if (critHandlers) jwtOptions.critHandlers = critHandlers;
-          const decryptedToken = await validateJwt(
-            token,
-            secret,
-            jwtOptions,
-          );
+          validatedJwt = await validateJwt({
+            jwt,
+            key,
+            algorithm,
+            critHandlers,
+          });
 
-          if (decryptedToken) {
-            if (
-              expiresAfter &&
-              decryptedToken.payload?.iat &&
-              decryptedToken.payload?.iat <
-                (new Date().getTime() - (expiresAfter || 0))
-            ) {
-              isExpired = true;
-            } else {
-              isUnauthorized = false;
-              onSuccess &&
-                onSuccess(ctx, decryptedToken);
-            }
+          if (validatedJwt.isValid) {
+            isUnauthorized = false;
+            onSuccess && onSuccess(ctx, validatedJwt);
           }
         }
       }
 
       if (isUnauthorized) {
         if (onFailure) {
-          const ignoreFailure = onFailure(ctx, isExpired);
+          const ignoreFailure = onFailure(ctx, validatedJwt);
 
           if (!ignoreFailure) return;
         } else {
           ctx.throw(
             ErrorStatus.Unauthorized,
-            isExpired
-              ? (customMessages?.ERROR_TOKEN_EXPIRED)
-              : (customMessages?.ERROR_INVALID_AUTH),
+            customMessages?.ERROR_INVALID_AUTH,
           );
         }
       }
