@@ -49,7 +49,7 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
   algorithm: Algorithm | Algorithm[];
 }
 
-export const errorMessages: ErrorMessages = {
+const errorMessages: ErrorMessages = {
   ERROR_INVALID_AUTH: "Authentication failed",
 };
 
