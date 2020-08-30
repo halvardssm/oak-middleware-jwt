@@ -20,11 +20,9 @@ const jwtOptions: JwtMiddlewareOptions = {
   algorithm: "HS512",
 };
 
-const payload = (): Payload => {
-  return {
-    iat: setExpiration(new Date().getTime()),
-    iss: "test",
-  };
+const payload = {
+  iat: setExpiration(new Date().getTime()),
+  iss: "test",
 };
 
 const mockContext = (token?: string): RouterContext =>
@@ -56,7 +54,7 @@ const tests = [
       let jwtObj: any = initJwtObj();
 
       const mockJwt = await makeJwt(
-        { key: SECRET, header, payload: payload() },
+        { key: SECRET, header, payload: payload },
       );
 
       const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
@@ -67,7 +65,7 @@ const tests = [
 
       await mw(mockContext(mockJwt), mockNext);
 
-      assert(jwtObj.payload?.iss === payload().iss);
+      assert(jwtObj.payload?.iss === payload.iss);
     },
   },
   {
