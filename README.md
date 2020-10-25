@@ -5,7 +5,7 @@
 [![(Deno)](https://img.shields.io/badge/oak-v6.3.1-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
 [![(Deno)](https://img.shields.io/badge/djwt-v1.7-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
 [![deno doc](https://img.shields.io/badge/deno-doc-blue.svg?style=flat-square&logo=deno)](https://doc.deno.land/https/raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts)
-[![nest badge](https://nest.land/badge-block.svg)](https://nest.land/package/Nessie)
+[![nest badge](https://nest.land/badge-block.svg)](https://nest.land/package/oak-middleware-jwt)
 
 Oak middleware for JWT
 
