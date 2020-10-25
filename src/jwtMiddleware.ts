@@ -1,18 +1,18 @@
 import {
+  Algorithm,
   Context,
+  HTTPMethods,
   JwtValidation,
   Middleware,
-  Validation,
   RouterContext,
   RouterMiddleware,
-  validateJwt,
-  HTTPMethods,
-  Algorithm,
   Status,
+  validateJwt,
+  Validation,
 } from "../deps.ts";
 
 export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
-export type IgnorePath = string | RegExp | Pattern;
+export type IgnorePattern = string | RegExp | Pattern;
 export type ErrorMessagesKeys = "ERROR_INVALID_AUTH";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
 export type OnSuccessHandler = (
@@ -32,7 +32,7 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
    * 
    * When passing a string, the string will be matched with the path `===`.
    */
-  ignorePatterns?: Array<IgnorePath>;
+  ignorePatterns?: Array<IgnorePattern>;
 
   /** Optional callback for successfull validation, passes the Context and the JwtValidation object */
   onSuccess?: OnSuccessHandler;
@@ -59,7 +59,7 @@ const isPattern = (obj: any): obj is Pattern => {
 
 const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
-  patterns: Array<IgnorePath>,
+  patterns: Array<IgnorePattern>,
 ): boolean => {
   const testString = (pattern: any) =>
     typeof pattern === "string" && pattern === ctx.request.url.pathname;
