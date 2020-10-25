@@ -5,7 +5,6 @@ import {
   Jose,
   JwtObject,
   makeJwt,
-  Payload,
   RouterContext,
   setExpiration,
 } from "./deps.ts";
@@ -173,6 +172,18 @@ const tests = [
     async fn() {
       const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
         ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
+      }));
+
+      await mw(mockContext(), mockNext);
+
+      assert(true);
+    },
+  },
+  {
+    name: "Pattern ignore multiple",
+    async fn() {
+      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+        ignorePatterns: ["/baz", /buz/, { path: "/biz", methods: ["GET"] }],
       }));
 
       await mw(mockContext(), mockNext);
