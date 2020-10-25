@@ -1,10 +1,11 @@
 # Oak Middleware JWT
-
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/halvardssm/oak-middleware-jwt?logo=deno&style=flat-square)](https://github.com/halvardssm/oak-middleware-jwt)
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/halvardssm/oak-middleware-jwt/CI/master?style=flat-square&logo=github)](https://github.com/halvardssm/oak-middleware-jwt/actions?query=branch%3Amaster+workflow%3ACI)
 [![(Deno)](https://img.shields.io/badge/deno-v1.4.6-green.svg?style=flat-square&logo=deno)](https://deno.land)
 [![(Deno)](https://img.shields.io/badge/oak-v6.3.1-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
 [![(Deno)](https://img.shields.io/badge/djwt-v1.7-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
 [![deno doc](https://img.shields.io/badge/deno-doc-blue.svg?style=flat-square&logo=deno)](https://doc.deno.land/https/raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts)
+[![nest badge](https://nest.land/badge-block.svg)](https://nest.land/package/Nessie)
 
 Oak middleware for JWT
 
