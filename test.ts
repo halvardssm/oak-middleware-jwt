@@ -20,7 +20,7 @@ const jwtOptions: JwtMiddlewareOptions = {
 };
 
 const payload = {
-  iat: setExpiration(new Date().getTime()),
+  iat: setExpiration(new Date()),
   iss: "test",
 };
 
@@ -47,6 +47,35 @@ const mockNext = () => {
 const initJwtObj = (): JwtObject => ({}) as JwtObject;
 
 const tests = [
+  {
+    name: "expired token",
+    async fn() {
+      let jwtObj: any = initJwtObj();
+
+      const mockJwt = await makeJwt(
+        {
+          key: SECRET,
+          header,
+          payload: {
+            ...payload,
+            iat: setExpiration(new Date(2000, 0, 1)),
+          },
+        },
+      );
+
+      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+        onSuccess: (ctx: any, jwt: any) => {
+          jwtObj = jwt;
+        },
+      }));
+
+      assertThrowsAsync(
+        async () => await mw(mockContext(mockJwt), mockNext),
+        undefined,
+        "Authentication failed",
+      );
+    },
+  },
   {
     name: "Success",
     async fn() {
