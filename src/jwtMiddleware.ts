@@ -147,8 +147,10 @@ export const jwtMiddleware = <
       critHandlers,
     });
 
-    if (!validatedJwt.isValid) {
+    // Invalid or expired token
+    if (validatedJwt.isExpired || !validatedJwt.isValid) {
       await onUnauthorized(validatedJwt);
+
       return;
     }
 
