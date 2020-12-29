@@ -1,5 +1,6 @@
 export {
   assert,
+  assertEquals,
   assertThrowsAsync,
 } from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
@@ -28,4 +29,8 @@ export type {
   RouterContext,
   RouterMiddleware,
 } from "https://deno.land/x/oak@v6.3.1/mod.ts";
-export { Context, Status } from "https://deno.land/x/oak@v6.3.1/mod.ts";
+export {
+  Application,
+  Context,
+  Status,
+} from "https://deno.land/x/oak@v6.3.1/mod.ts";
