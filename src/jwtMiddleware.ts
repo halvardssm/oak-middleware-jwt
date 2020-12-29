@@ -29,7 +29,7 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
   customMessages?: ErrorMessages;
 
   /** Pattern to ignore e.g. `/authenticate`, can be a RegExp, Pattern object or string.
-   * 
+   *
    * When passing a string, the string will be matched with the path `===`.
    */
   ignorePatterns?: Array<IgnorePattern>;
@@ -38,7 +38,7 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
   onSuccess?: OnSuccessHandler;
 
   /** Optional callback for unsuccessfull validation, passes the Context and JwtValidation if the JWT is present in the header.
-	 * 
+	 *
 	 * When not used, will throw HTTPError using custom (or default) messages.
 	 * If you want the failure to be ignored and to call the next middleware, return true.
 	 */
@@ -83,6 +83,12 @@ const ignorePath = <T extends Context | RouterContext>(
   return false;
 };
 
+/*
+  Errors:
+  1. No authorization header
+  2. Invalid authorization header
+  3. Authorization header that is not Bearer + Token
+*/
 export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
 >({
@@ -91,49 +97,62 @@ export const jwtMiddleware = <
   critHandlers,
   customMessages = {},
   ignorePatterns,
-  onSuccess,
-  onFailure,
+  onSuccess = () => {},
+  onFailure = () => true,
 }: JwtMiddlewareOptions): T => {
   Object.assign(customMessages, errorMessages);
 
   const core: RouterMiddleware = async (ctx, next) => {
-    if (!ignorePatterns || !ignorePath(ctx, ignorePatterns)) {
-      let isUnauthorized = true;
-      let validatedJwt;
-      if (ctx.request.headers.has("Authorization")) {
-        const authHeader = ctx.request.headers.get("Authorization")!;
-
-        if (authHeader.startsWith("Bearer ") && authHeader.length > 7) {
-          const jwt = authHeader.slice(7);
-
-          validatedJwt = await validateJwt({
-            jwt,
-            key,
-            algorithm,
-            critHandlers,
-          });
-
-          if (validatedJwt.isValid) {
-            isUnauthorized = false;
-            onSuccess && onSuccess(ctx, validatedJwt);
-          }
-        }
+    const onUnauthorized = async (
+      validatedJwt?: JwtValidation,
+    ) => {
+      const shouldThrow = onFailure(ctx, validatedJwt);
+      if (shouldThrow) {
+        ctx.throw(
+          Status.Unauthorized,
+          customMessages?.ERROR_INVALID_AUTH,
+        );
       }
 
-      if (isUnauthorized) {
-        if (onFailure) {
-          const ignoreFailure = onFailure(ctx, validatedJwt);
+      await next();
+    };
 
-          if (!ignoreFailure) return;
-        } else {
-          ctx.throw(
-            Status.Unauthorized,
-            customMessages?.ERROR_INVALID_AUTH,
-          );
-        }
-      }
+    // If request matches ignore, call next early
+    if (ignorePatterns && ignorePath(ctx, ignorePatterns)) {
+      await next();
+
+      return;
     }
 
+    // No Authorization header
+    if (!ctx.request.headers.has("Authorization")) {
+      await onUnauthorized();
+
+      return;
+    }
+
+    // Authorization header has no Bearer or no token
+    const authHeader = ctx.request.headers.get("Authorization")!;
+    if (!authHeader.startsWith("Bearer ") || authHeader.length <= 7) {
+      await onUnauthorized();
+
+      return;
+    }
+
+    const jwt = authHeader.slice(7);
+    const validatedJwt = await validateJwt({
+      jwt,
+      key,
+      algorithm,
+      critHandlers,
+    });
+
+    if (!validatedJwt.isValid) {
+      await onUnauthorized(validatedJwt);
+      return;
+    }
+
+    onSuccess(ctx, validatedJwt);
     await next();
   };
 

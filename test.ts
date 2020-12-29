@@ -191,6 +191,49 @@ const tests = [
       assert(true);
     },
   },
+  {
+    name: "onSuccess is not called on invalid jwt",
+    async fn() {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onSuccess: () => {
+          assert(false, "onSuccess is not called");
+        },
+      });
+
+      assertThrowsAsync(
+        async () =>
+          await mw(
+            mockContext(
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            ),
+            mockNext,
+          ),
+        undefined,
+        "Authentication failed",
+      );
+    },
+  },
+  {
+    name: "onFailure is called",
+    async fn() {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onFailure: () => {
+          assert(true, "onFailure is called");
+
+          return false;
+        },
+      });
+
+      await mw(
+        mockContext(
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        ),
+        mockNext,
+      );
+    },
+  },
 ];
 
 for await (const test of tests) {
