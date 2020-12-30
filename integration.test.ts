@@ -13,7 +13,7 @@ const ALGORITHM: AlgorithmInput = "HS512";
 const INVALID_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 
-const getJWT = ({ expirationDate }: { expirationDate?: number } = {}) => {
+const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
   return create({ alg: ALGORITHM, typ: "jwt" }, {
     exp: getNumericDate(expirationDate || 60 * 60),
   }, SECRET);
@@ -124,27 +124,27 @@ const tests = [
       controller.abort();
     },
   },
-  // {
-  //   name: "failure with expired token",
-  //   async fn() {
-  //     const { controller, client, listen } = createApplicationAndClient();
-  //     listen();
+  {
+    name: "failure with expired token",
+    async fn() {
+      const { controller, client, listen } = createApplicationAndClient();
+      listen();
 
-  //     const headers = new Headers();
-  //     const expiredJwt = await getJWT({
-  //       expirationDate: new Date(2000, 0, 1),
-  //     });
+      const headers = new Headers();
+      const expiredJwt = await getJWT({
+        expirationDate: new Date(2000, 0, 0),
+      });
 
-  //     headers.set("Authorization", `Bearer ${expiredJwt}`);
+      headers.set("Authorization", `Bearer ${expiredJwt}`);
 
-  //     const response = await client.request({ headers });
+      const response = await client.request({ headers });
 
-  //     assertEquals(response.status, 401);
-  //     assertEquals(await response.text(), "Authentication failed");
+      assertEquals(response.status, 401);
+      assertEquals(await response.text(), "Authentication failed");
 
-  //     controller.abort();
-  //   },
-  // },
+      controller.abort();
+    },
+  },
 ];
 
 for await (const test of tests) {

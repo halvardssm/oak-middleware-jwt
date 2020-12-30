@@ -4,6 +4,7 @@ import {
   assertThrowsAsync,
   create,
   createHttpError,
+  getNumericDate,
   Payload,
   RouterContext,
 } from "./deps.ts";
@@ -37,35 +38,6 @@ const mockNext = () => {
 };
 
 const tests = [
-  // {
-  //   name: "expired token",
-  //   async fn() {
-  //     let jwtObj: any = initJwtObj();
-
-  //     const mockJwt = await makeJwt(
-  //       {
-  //         key: SECRET,
-  //         header,
-  //         payload: {
-  //           ...payload,
-  //           iat: setExpiration(new Date(2000, 0, 1)),
-  //         },
-  //       },
-  //     );
-
-  //     const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-  //       onSuccess: (ctx: any, jwt: any) => {
-  //         jwtObj = jwt;
-  //       },
-  //     }));
-
-  //     assertThrowsAsync(
-  //       async () => await mw(mockContext(mockJwt), mockNext),
-  //       undefined,
-  //       "Authentication failed",
-  //     );
-  //   },
-  // },
   {
     name: "Success",
     async fn() {
@@ -88,6 +60,24 @@ const tests = [
       await mw(mockContext(mockJwt), mockNext);
 
       assert(jwtObj.test === payload.test);
+    },
+  },
+  {
+    name: "Failure with expiretd token",
+    async fn() {
+      const mockJwt = await create(
+        { alg: ALGORITHM, typ: "jwt" },
+        { exp: getNumericDate(new Date(2000, 1, 0)) },
+        SECRET,
+      );
+
+      const mw = jwtMiddleware(jwtOptions);
+
+      assertThrowsAsync(
+        async () => await mw(mockContext(mockJwt), mockNext),
+        undefined,
+        "Authentication failed",
+      );
     },
   },
   {
