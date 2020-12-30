@@ -4,22 +4,13 @@ export {
   assertThrowsAsync,
 } from "https://deno.land/std@0.74.0/testing/asserts.ts";
 
-export { validateJwt } from "https://deno.land/x/djwt@v1.7/validate.ts";
-export type {
-  JwtObject,
-  JwtValidation,
-  Validation,
-} from "https://deno.land/x/djwt@v1.7/validate.ts";
-
+export type { Payload } from "https://deno.land/x/djwt@v2.0/mod.ts";
+export type { AlgorithmInput } from "https://deno.land/x/djwt@v2.0/algorithm.ts";
 export {
-  makeJwt,
-  setExpiration,
-} from "https://deno.land/x/djwt@v1.7/create.ts";
-export type {
-  Algorithm,
-  Jose,
-  Payload,
-} from "https://deno.land/x/djwt@v1.7/create.ts";
+  create,
+  getNumericDate,
+  verify,
+} from "https://deno.land/x/djwt@v2.0/mod.ts";
 
 export { createHttpError } from "https://deno.land/x/oak@v6.3.1/httpError.ts";
 

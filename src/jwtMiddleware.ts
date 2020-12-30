@@ -1,14 +1,13 @@
 import {
-  Algorithm,
+  AlgorithmInput,
   Context,
   HTTPMethods,
-  JwtValidation,
   Middleware,
+  Payload,
   RouterContext,
   RouterMiddleware,
   Status,
-  validateJwt,
-  Validation,
+  verify,
 } from "../deps.ts";
 
 export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
@@ -17,14 +16,16 @@ export type ErrorMessagesKeys = "ERROR_INVALID_AUTH";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
 export type OnSuccessHandler = (
   ctx: Context | RouterContext,
-  jwtValidation: JwtValidation,
+  payload: Payload,
 ) => void;
 export type OnFailureHandler = (
   ctx: Context | RouterContext,
-  jwtValidation?: JwtValidation,
+  error: Error,
 ) => boolean;
 
-export interface JwtMiddlewareOptions extends Partial<Validation> {
+export type { AlgorithmInput, Payload };
+
+export interface JwtMiddlewareOptions {
   /** Custom error messages */
   customMessages?: ErrorMessages;
 
@@ -46,7 +47,7 @@ export interface JwtMiddlewareOptions extends Partial<Validation> {
 
   /** See the djwt module for Validation options */
   key: string;
-  algorithm: Algorithm | Algorithm[];
+  algorithm: AlgorithmInput;
 }
 
 const errorMessages: ErrorMessages = {
@@ -83,18 +84,11 @@ const ignorePath = <T extends Context | RouterContext>(
   return false;
 };
 
-/*
-  Errors:
-  1. No authorization header
-  2. Invalid authorization header
-  3. Authorization header that is not Bearer + Token
-*/
 export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
 >({
   key,
   algorithm,
-  critHandlers,
   customMessages = {},
   ignorePatterns,
   onSuccess = () => {},
@@ -104,9 +98,9 @@ export const jwtMiddleware = <
 
   const core: RouterMiddleware = async (ctx, next) => {
     const onUnauthorized = async (
-      validatedJwt?: JwtValidation,
+      jwtValidation: Error,
     ) => {
-      const shouldThrow = onFailure(ctx, validatedJwt);
+      const shouldThrow = onFailure(ctx, jwtValidation);
       if (shouldThrow) {
         ctx.throw(
           Status.Unauthorized,
@@ -126,7 +120,7 @@ export const jwtMiddleware = <
 
     // No Authorization header
     if (!ctx.request.headers.has("Authorization")) {
-      await onUnauthorized();
+      await onUnauthorized(new Error("Authorization header is not present"));
 
       return;
     }
@@ -134,28 +128,18 @@ export const jwtMiddleware = <
     // Authorization header has no Bearer or no token
     const authHeader = ctx.request.headers.get("Authorization")!;
     if (!authHeader.startsWith("Bearer ") || authHeader.length <= 7) {
-      await onUnauthorized();
+      await onUnauthorized(new Error("Invalid Authorization header"));
 
       return;
     }
 
     const jwt = authHeader.slice(7);
-    const validatedJwt = await validateJwt({
-      jwt,
-      key,
-      algorithm,
-      critHandlers,
-    });
-
-    // Invalid or expired token
-    if (validatedJwt.isExpired || !validatedJwt.isValid) {
-      await onUnauthorized(validatedJwt);
-
-      return;
+    try {
+      onSuccess(ctx, await verify(jwt, key, algorithm));
+      await next();
+    } catch (e) {
+      await onUnauthorized(e);
     }
-
-    onSuccess(ctx, validatedJwt);
-    await next();
   };
 
   return core as T;

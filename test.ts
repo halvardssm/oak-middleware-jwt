@@ -1,27 +1,19 @@
 import {
+  AlgorithmInput,
   assert,
   assertThrowsAsync,
+  create,
   createHttpError,
-  Jose,
-  JwtObject,
-  makeJwt,
+  Payload,
   RouterContext,
-  setExpiration,
 } from "./deps.ts";
 import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
 
 const SECRET = "some-secret";
-const header: Jose = {
-  alg: "HS512",
-};
-const jwtOptions: JwtMiddlewareOptions = {
+const ALGORITHM: AlgorithmInput = "HS512";
+const jwtOptions = {
   key: SECRET,
-  algorithm: "HS512",
-};
-
-const payload = {
-  iat: setExpiration(new Date()),
-  iss: "test",
+  algorithm: ALGORITHM,
 };
 
 const mockContext = (token?: string): RouterContext =>
@@ -43,8 +35,6 @@ const mockNext = () => {
     resolve();
   });
 };
-
-const initJwtObj = (): JwtObject => ({}) as JwtObject;
 
 const tests = [
   // {
@@ -79,21 +69,25 @@ const tests = [
   {
     name: "Success",
     async fn() {
-      let jwtObj: any = initJwtObj();
+      let jwtObj: Payload = {};
 
-      const mockJwt = await makeJwt(
-        { key: SECRET, header, payload: payload },
+      const payload = { test: "test" };
+      const mockJwt = await create(
+        { alg: ALGORITHM, typ: "jwt" },
+        payload,
+        SECRET,
       );
 
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        onSuccess: (ctx: any, jwt: any) => {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onSuccess: (ctx: any, jwt: Payload) => {
           jwtObj = jwt;
         },
-      }));
+      });
 
       await mw(mockContext(mockJwt), mockNext);
 
-      assert(jwtObj.payload?.iss === payload.iss);
+      assert(jwtObj.test === payload.test);
     },
   },
   {
@@ -189,9 +183,10 @@ const tests = [
   {
     name: "Pattern ignore object string wrong method",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
-      }));
+      });
 
       assertThrowsAsync(async () => await mw(mockContext(), mockNext));
     },
@@ -199,9 +194,10 @@ const tests = [
   {
     name: "Pattern ignore object string correct method",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
-      }));
+      });
 
       await mw(mockContext(), mockNext);
 
@@ -211,9 +207,10 @@ const tests = [
   {
     name: "Pattern ignore multiple",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: ["/baz", /buz/, { path: "/biz", methods: ["GET"] }],
-      }));
+      });
 
       await mw(mockContext(), mockNext);
 

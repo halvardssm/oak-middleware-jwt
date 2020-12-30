@@ -1,30 +1,22 @@
 import {
+  AlgorithmInput,
   Application,
   assertEquals,
-  makeJwt,
+  create,
+  getNumericDate,
   Middleware,
-  setExpiration,
 } from "./deps.ts";
 import { jwtMiddleware } from "./mod.ts";
 
 const SECRET = "some-secret";
-const ALGORITHM = "HS512";
+const ALGORITHM: AlgorithmInput = "HS512";
 const INVALID_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 
-const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
-  return makeJwt(
-    {
-      key: SECRET,
-      header: {
-        alg: ALGORITHM,
-      },
-      payload: {
-        iat: setExpiration(new Date()),
-        iss: "test",
-      },
-    },
-  );
+const getJWT = ({ expirationDate }: { expirationDate?: number } = {}) => {
+  return create({ alg: ALGORITHM, typ: "jwt" }, {
+    exp: getNumericDate(expirationDate || 60 * 60),
+  }, SECRET);
 };
 
 // Spawns an application with middleware instantiated
@@ -48,6 +40,7 @@ const createApplicationAndClient = () => {
     listen: () => {
       return app.listen({
         port: 9876,
+        hostname: "localhost",
         signal: controller.signal,
       });
     },
