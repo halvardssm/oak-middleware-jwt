@@ -13,7 +13,7 @@ import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
 const SECRET = "some-secret";
 const ALGORITHM: AlgorithmInput = "HS512";
 const jwtOptions = {
-  key: SECRET,
+  secret: SECRET,
   algorithm: ALGORITHM,
 };
 
@@ -52,8 +52,8 @@ const tests = [
 
       const mw = jwtMiddleware({
         ...jwtOptions,
-        onSuccess: (ctx: any, jwt: Payload) => {
-          jwtObj = jwt;
+        onSuccess: (ctx: any, payload: Payload) => {
+          jwtObj = payload;
         },
       });
 
@@ -63,7 +63,7 @@ const tests = [
     },
   },
   {
-    name: "Failure with expiretd token",
+    name: "Failure with expired token",
     async fn() {
       const mockJwt = await create(
         { alg: ALGORITHM, typ: "jwt" },

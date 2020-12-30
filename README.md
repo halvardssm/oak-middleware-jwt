@@ -18,9 +18,9 @@ Oak middleware for JWT
   import { Middleware } from "https://deno.land/x/oak/mod.ts";
 
   const app = new Application();
-  
+
   app.use(jwtMiddleware<Middleware>({key: "foo"}));
-  
+
   await app.listen(appOptions);
   ```
 
@@ -29,26 +29,26 @@ Oak middleware for JWT
   ```ts
   import { jwtMiddleware, OnSuccessHandler } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
   import { RouterMiddleware } from "https://deno.land/x/oak/mod.ts";
-  
+
   interface ApplicationState {
     userId: string
   }
-  
+
   const router = new Router();
   const app = new Application<ApplicationState>();
-  
-  const onSuccess: OnSuccessHandler = (ctx, token) => {
-    ctx.state.userId = token
+
+  const onSuccess: OnSuccessHandler = (ctx, jwtPayload) => {
+    ctx.state.userId = jwtPayload.userId
   }
-  
+
   router
     .get("/bar", jwtMiddleware<RouterMiddleware>({ key:"foo", onSuccess }), async (ctx) => {
       const callerId = ctx.state.userId
       ...
     })
-  
+
   app.use(router.routes());
-  
+
   await app.listen(appOptions);
   ```
 
@@ -57,24 +57,55 @@ Oak middleware for JWT
   ```ts
   import { jwtMiddleware, OnSuccessHandler, IgnorePattern } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts"
   import { RouterMiddleware } from "https://deno.land/x/oak/mod.ts";
-  
+
   const app = new Application<ApplicationState>();
-  
+
   const ignorePatterns: IgnorePattern[] = ["/baz", /buz/, {path: "/biz", methods: ["GET"]}]
 
   app.use(jwtMiddleware<Middleware>({key: "foo", ignorePatterns}));
-  
+
   await app.listen(appOptions);
   ```
 
 ## Options
 
-* key: string; // See the djwt module for Validation options
-* algorithm: Algorithm | Algorithm[]; // See the djwt module for Validation options
+* secret: string; // See the djwt module for Validation options
+* algorithm: AlgorithmInput ; // See the djwt module for Validation options
 * customMessages?: ErrorMessages; // Custom error messages
 * ignorePatterns?: Array<IgnorePattern>; // Pattern to ignore e.g. `/authenticate`, can be a RegExp, Pattern object or string. When passing a string, the string will be matched with the path `===`
-* onSuccess?: OnSuccessHandler; // Optional callback for successfull validation, passes the Context and the JwtValidation object
-* onFailure?: OnFailureHandler; // Optional callback for unsuccessfull validation, passes the Context and JwtValidation if the JWT is present in the header
+* onSuccess?: OnSuccessHandler; // Optional callback for successfull validation, passes the Context and the Payload object from djwt module
+* onFailure?: OnFailureHandler; // Optional callback for unsuccessfull validation, passes the Context and the Error encountered while validating the jwt
+
+## Migrating from v1.0.0
+
+- Change the previous `algorithm` parameter's type from `Algorithm` to `AlgorithmInput`
+
+```ts
+import { AlgorithmInput } from "https://raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts";
+
+const algorithm: AlgorithmInput = "HS512";
+
+app.use(jwtMiddleware<Middleware>({key: "foo", algorithm }))
+```
+
+- Change the onFailure and onSuccess callbacks.
+  - `onSuccess` gets an object of type `Payload` as a second argument (check https://github.com/timonson/djwt#decode)
+  - `onFailure` gets an object of type `Error` as a second argument
+
+```ts
+const onFailure = (ctx, error: Error) => {
+  console.log(error.message)
+}
+
+const onSuccess = (ctx, payload: Payload) => {
+  console.log(payload.userId)
+}
+```
+
+- Change property `key` to `secret`, as the former is deprecated.
+
+- The expired token bug was fixed. This module will now throw an error (and call `onFailure` callback) if the token sent is expired. Can cause problems in implementations that weren't expecting that
+
 
 ## Contributing
 

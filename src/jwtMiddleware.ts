@@ -49,7 +49,8 @@ export interface JwtMiddlewareOptions {
   onFailure?: OnFailureHandler;
 
   /** See the djwt module for Validation options */
-  key: string;
+  key?: string; // Deprecated
+  secret: string;
   algorithm: AlgorithmInput;
 }
 
@@ -93,12 +94,19 @@ export const jwtMiddleware = <
   T extends RouterMiddleware | Middleware = Middleware,
 >({
   key,
+  secret,
   algorithm,
   customMessages = {},
   ignorePatterns,
   onSuccess = () => {},
   onFailure = () => true,
 }: JwtMiddlewareOptions): T => {
+  if (typeof key === undefined) {
+    console.warn(
+      `oak-middleware-jwt: Property 'key' is going to be deprecated, you should now use 'secret' instead.`,
+    );
+  }
+
   Object.assign(customMessages, errorMessages);
 
   const core: RouterMiddleware = async (ctx, next) => {
@@ -143,7 +151,7 @@ export const jwtMiddleware = <
 
     const jwt = authHeader.slice(7);
     try {
-      onSuccess(ctx, await verify(jwt, key, algorithm));
+      onSuccess(ctx, await verify(jwt, secret, algorithm));
       await next();
     } catch (e) {
       await onUnauthorized(e, true);
