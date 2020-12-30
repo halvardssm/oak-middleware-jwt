@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  DENO_VERSION: 1.4.6
+  DENO_VERSION: 1.6.0
 
 on:
   push:
@@ -21,9 +21,9 @@ jobs:
         uses: actions/checkout@master
       - name: Install deno
         uses: denolib/setup-deno@master
-        with: 
+        with:
           deno-version: ${{env.DENO_VERSION}}
       - name: Check formatting
         run: deno fmt --check
       - name: Run tests
-        run: deno test
+        run: make test

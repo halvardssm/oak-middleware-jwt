@@ -12,7 +12,10 @@ import {
 
 export type Pattern = { path: string | RegExp; methods?: HTTPMethods[] };
 export type IgnorePattern = string | RegExp | Pattern;
-export type ErrorMessagesKeys = "ERROR_INVALID_AUTH";
+export type ErrorMessagesKeys =
+  | "ERROR_INVALID_AUTH"
+  | "AUTHORIZATION_HEADER_NOT_PRESENT"
+  | "AUTHORIZATION_HEADER_INVALID";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
 export type OnSuccessHandler = (
   ctx: Context | RouterContext,
@@ -52,6 +55,8 @@ export interface JwtMiddlewareOptions {
 
 const errorMessages: ErrorMessages = {
   ERROR_INVALID_AUTH: "Authentication failed",
+  AUTHORIZATION_HEADER_NOT_PRESENT: "Authorization header is not present",
+  AUTHORIZATION_HEADER_INVALID: "Invalid Authorization header",
 };
 
 const isPattern = (obj: any): obj is Pattern => {
@@ -99,6 +104,7 @@ export const jwtMiddleware = <
   const core: RouterMiddleware = async (ctx, next) => {
     const onUnauthorized = async (
       jwtValidation: Error,
+      isJwtValidationError: boolean = false,
     ) => {
       const shouldThrow = onFailure(ctx, jwtValidation);
       if (shouldThrow) {
@@ -120,7 +126,7 @@ export const jwtMiddleware = <
 
     // No Authorization header
     if (!ctx.request.headers.has("Authorization")) {
-      await onUnauthorized(new Error("Authorization header is not present"));
+      await onUnauthorized(new Error(errorMessages.ERROR_INVALID_AUTH));
 
       return;
     }
@@ -128,7 +134,9 @@ export const jwtMiddleware = <
     // Authorization header has no Bearer or no token
     const authHeader = ctx.request.headers.get("Authorization")!;
     if (!authHeader.startsWith("Bearer ") || authHeader.length <= 7) {
-      await onUnauthorized(new Error("Invalid Authorization header"));
+      await onUnauthorized(
+        new Error(errorMessages.AUTHORIZATION_HEADER_INVALID),
+      );
 
       return;
     }
@@ -138,7 +146,7 @@ export const jwtMiddleware = <
       onSuccess(ctx, await verify(jwt, key, algorithm));
       await next();
     } catch (e) {
-      await onUnauthorized(e);
+      await onUnauthorized(e, true);
     }
   };
 
