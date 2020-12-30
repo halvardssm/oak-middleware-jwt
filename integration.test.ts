@@ -13,6 +13,12 @@ const ALGORITHM: AlgorithmInput = "HS512";
 const INVALID_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 
+const randomPort = (min = 9000, max = 9999) => {
+  let num = Math.random() * (max - min) + min;
+
+  return Math.floor(num);
+};
+
 const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
   return create({ alg: ALGORITHM, typ: "jwt" }, {
     exp: getNumericDate(expirationDate || 60 * 60),
@@ -21,6 +27,7 @@ const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
 
 // Spawns an application with middleware instantiated
 const createApplicationAndClient = () => {
+  const port = randomPort();
   const controller = new AbortController();
   const app = new Application();
 
@@ -39,7 +46,7 @@ const createApplicationAndClient = () => {
   return {
     listen: () => {
       return app.listen({
-        port: 9876,
+        port,
         hostname: "localhost",
         signal: controller.signal,
       });
@@ -47,7 +54,7 @@ const createApplicationAndClient = () => {
     controller,
     client: {
       request: (options: RequestInit) => {
-        return fetch("http://localhost:9876", options);
+        return fetch(`http://localhost:${port}`, options);
       },
     },
   };
@@ -85,7 +92,7 @@ const tests = [
 
       assertEquals(response.status, 401);
       assertEquals(response.statusText, "Unauthorized");
-      assertEquals(await response.text(), "Authentication failed");
+      assertEquals(await response.text(), "The serialization is invalid.");
 
       controller.abort();
     },
@@ -119,7 +126,10 @@ const tests = [
       const response = await client.request({ headers });
 
       assertEquals(response.status, 401);
-      assertEquals(await response.text(), "Authentication failed");
+      assertEquals(
+        await response.text(),
+        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
+      );
 
       controller.abort();
     },
@@ -140,7 +150,7 @@ const tests = [
       const response = await client.request({ headers });
 
       assertEquals(response.status, 401);
-      assertEquals(await response.text(), "Authentication failed");
+      assertEquals(await response.text(), "The jwt is expired.");
 
       controller.abort();
     },

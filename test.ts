@@ -12,7 +12,7 @@ import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
 
 const SECRET = "some-secret";
 const ALGORITHM: AlgorithmInput = "HS512";
-const jwtOptions = {
+const jwtOptions: JwtMiddlewareOptions = {
   key: SECRET,
   algorithm: ALGORITHM,
 };
@@ -76,7 +76,7 @@ const tests = [
       assertThrowsAsync(
         async () => await mw(mockContext(mockJwt), mockNext),
         undefined,
-        "Authentication failed",
+        "The jwt is expired.",
       );
     },
   },
@@ -118,7 +118,7 @@ const tests = [
             mockNext,
           ),
         undefined,
-        "Authentication failed",
+        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
       );
     },
   },
@@ -226,7 +226,7 @@ const tests = [
             mockNext,
           ),
         undefined,
-        "Authentication failed",
+        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
       );
     },
   },
