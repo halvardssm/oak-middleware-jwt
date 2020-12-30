@@ -27,7 +27,7 @@ const createApplicationAndClient = () => {
   app.use(
     jwtMiddleware<Middleware>({
       algorithm: ALGORITHM,
-      secret: SECRET,
+      key: SECRET,
     }),
   );
 

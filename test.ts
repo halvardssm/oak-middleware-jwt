@@ -13,7 +13,7 @@ import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
 const SECRET = "some-secret";
 const ALGORITHM: AlgorithmInput = "HS512";
 const jwtOptions = {
-  secret: SECRET,
+  key: SECRET,
   algorithm: ALGORITHM,
 };
 

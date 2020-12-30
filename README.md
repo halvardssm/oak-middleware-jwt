@@ -69,7 +69,7 @@ Oak middleware for JWT
 
 ## Options
 
-* secret: string; // See the djwt module for Validation options
+* key: string; // See the djwt module for Validation options
 * algorithm: AlgorithmInput ; // See the djwt module for Validation options
 * customMessages?: ErrorMessages; // Custom error messages
 * ignorePatterns?: Array<IgnorePattern>; // Pattern to ignore e.g. `/authenticate`, can be a RegExp, Pattern object or string. When passing a string, the string will be matched with the path `===`
@@ -101,8 +101,6 @@ const onSuccess = (ctx, payload: Payload) => {
   console.log(payload.userId)
 }
 ```
-
-- Change property `key` to `secret`, as the former is deprecated.
 
 - The expired token bug was fixed. This module will now throw an error (and call `onFailure` callback) if the token sent is expired. Can cause problems in implementations that weren't expecting that
 
