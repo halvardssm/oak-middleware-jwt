@@ -63,7 +63,7 @@ const tests = [
     },
   },
   {
-    name: "Failure with expiretd token",
+    name: "Failure with expired token",
     async fn() {
       const mockJwt = await create(
         { alg: ALGORITHM, typ: "jwt" },
