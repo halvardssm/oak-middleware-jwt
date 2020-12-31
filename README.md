@@ -90,7 +90,7 @@ app.use(jwtMiddleware<Middleware>({key: "foo", algorithm }))
 
 - Change the onFailure and onSuccess callbacks.
   - `onSuccess` gets an object of type `Payload` as a second argument (check https://github.com/timonson/djwt#decode)
-  - `onFailure` gets an object of type `Error` as a second argument
+  - `onFailure` gets an object of type `Error` as a second argument, should return `true` if the error should be thrown instead of returning as a response.
 
 ```ts
 const onFailure = (ctx, error: Error) => {
