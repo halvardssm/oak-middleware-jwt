@@ -1,27 +1,20 @@
 import {
+  AlgorithmInput,
   assert,
   assertThrowsAsync,
+  create,
   createHttpError,
-  Jose,
-  JwtObject,
-  makeJwt,
+  getNumericDate,
+  Payload,
   RouterContext,
-  setExpiration,
 } from "./deps.ts";
 import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
 
 const SECRET = "some-secret";
-const header: Jose = {
-  alg: "HS512",
-};
+const ALGORITHM: AlgorithmInput = "HS512";
 const jwtOptions: JwtMiddlewareOptions = {
   key: SECRET,
-  algorithm: "HS512",
-};
-
-const payload = {
-  iat: setExpiration(new Date().getTime()),
-  iss: "test",
+  algorithm: ALGORITHM,
 };
 
 const mockContext = (token?: string): RouterContext =>
@@ -44,27 +37,47 @@ const mockNext = () => {
   });
 };
 
-const initJwtObj = (): JwtObject => ({}) as JwtObject;
-
 const tests = [
   {
     name: "Success",
     async fn() {
-      let jwtObj: any = initJwtObj();
+      let jwtObj: Payload = {};
 
-      const mockJwt = await makeJwt(
-        { key: SECRET, header, payload: payload },
+      const payload = { test: "test" };
+      const mockJwt = await create(
+        { alg: ALGORITHM, typ: "jwt" },
+        payload,
+        SECRET,
       );
 
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        onSuccess: (ctx: any, jwt: any) => {
-          jwtObj = jwt;
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onSuccess: (ctx: any, payload: Payload) => {
+          jwtObj = payload;
         },
-      }));
+      });
 
       await mw(mockContext(mockJwt), mockNext);
 
-      assert(jwtObj.payload?.iss === payload.iss);
+      assert(jwtObj.test === payload.test);
+    },
+  },
+  {
+    name: "Failure with expired token",
+    async fn() {
+      const mockJwt = await create(
+        { alg: ALGORITHM, typ: "jwt" },
+        { exp: getNumericDate(new Date(2000, 1, 0)) },
+        SECRET,
+      );
+
+      const mw = jwtMiddleware(jwtOptions);
+
+      assertThrowsAsync(
+        async () => await mw(mockContext(mockJwt), mockNext),
+        undefined,
+        "The jwt is expired.",
+      );
     },
   },
   {
@@ -105,7 +118,7 @@ const tests = [
             mockNext,
           ),
         undefined,
-        "Authentication failed",
+        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
       );
     },
   },
@@ -160,9 +173,10 @@ const tests = [
   {
     name: "Pattern ignore object string wrong method",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
-      }));
+      });
 
       assertThrowsAsync(async () => await mw(mockContext(), mockNext));
     },
@@ -170,9 +184,10 @@ const tests = [
   {
     name: "Pattern ignore object string correct method",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
-      }));
+      });
 
       await mw(mockContext(), mockNext);
 
@@ -182,13 +197,57 @@ const tests = [
   {
     name: "Pattern ignore multiple",
     async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
         ignorePatterns: ["/baz", /buz/, { path: "/biz", methods: ["GET"] }],
-      }));
+      });
 
       await mw(mockContext(), mockNext);
 
       assert(true);
+    },
+  },
+  {
+    name: "onSuccess is not called on invalid jwt",
+    async fn() {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onSuccess: () => {
+          assert(false, "onSuccess is not called");
+        },
+      });
+
+      assertThrowsAsync(
+        async () =>
+          await mw(
+            mockContext(
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+            ),
+            mockNext,
+          ),
+        undefined,
+        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
+      );
+    },
+  },
+  {
+    name: "onFailure is called",
+    async fn() {
+      const mw = jwtMiddleware({
+        ...jwtOptions,
+        onFailure: () => {
+          assert(true, "onFailure is called");
+
+          return false;
+        },
+      });
+
+      await mw(
+        mockContext(
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        ),
+        mockNext,
+      );
     },
   },
 ];
