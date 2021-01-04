@@ -11,4 +11,9 @@
     "./README.md",
     "./LICENSE"
   ],
+  "check": true,
+  "entry": "./mod.ts",
+  "homepage": "https://github.com/halvardssm/oak-middleware-jwt",
+  "ignore": [],
+  "unlisted": false
 }
