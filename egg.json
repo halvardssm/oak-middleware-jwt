@@ -1,9 +1,9 @@
 {
   "name": "oak-middleware-jwt",
-  "entry": "/mod.ts",
   "description": "Oak middleware for JWT validation using djwt",
-  "homepage": "https://github.com/halvardssm/oak-middleware-jwt",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "stable": true,
+  "repository": "https://github.com/halvardssm/oak-middleware-jwt",
   "files": [
     "./mod.ts",
     "./deps.ts",
@@ -11,10 +11,4 @@
     "./README.md",
     "./LICENSE"
   ],
-  "checkFormat": false,
-  "checkTests": false,
-  "checkInstallation": false,
-  "check": true,
-  "ignore": [],
-  "unlisted": false
 }
