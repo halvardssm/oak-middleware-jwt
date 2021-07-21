@@ -59,6 +59,7 @@ const errorMessages: ErrorMessages = {
   AUTHORIZATION_HEADER_INVALID: "Invalid Authorization header",
 };
 
+// deno-lint-ignore no-explicit-any
 const isPattern = (obj: any): obj is Pattern => {
   return typeof obj === "object" && obj.path;
 };
@@ -67,8 +68,10 @@ const ignorePath = <T extends Context | RouterContext>(
   ctx: T,
   patterns: Array<IgnorePattern>,
 ): boolean => {
+  // deno-lint-ignore no-explicit-any
   const testString = (pattern: any) =>
     typeof pattern === "string" && pattern === ctx.request.url.pathname;
+  // deno-lint-ignore no-explicit-any
   const testRegExp = (pattern: any) =>
     pattern instanceof RegExp && pattern.test(ctx.request.url.pathname);
 
@@ -104,7 +107,7 @@ export const jwtMiddleware = <
   const core: RouterMiddleware = async (ctx, next) => {
     const onUnauthorized = async (
       jwtValidation: Error,
-      isJwtValidationError: boolean = false,
+      isJwtValidationError = false,
     ) => {
       const shouldThrow = onFailure(ctx, jwtValidation);
       if (shouldThrow) {

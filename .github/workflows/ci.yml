@@ -1,15 +1,15 @@
 name: CI
 
 env:
-  DENO_VERSION: 1.6.3
+  DENO_VERSION: 1.12.1
 
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   tests:
@@ -18,12 +18,14 @@ jobs:
 
     steps:
       - name: Clone repo
-        uses: actions/checkout@master
+        uses: actions/checkout@main
       - name: Install deno
-        uses: denolib/setup-deno@master
-        with:
+        uses: denoland/setup-deno@main
+        with: 
           deno-version: ${{env.DENO_VERSION}}
       - name: Check formatting
         run: deno fmt --check
+      - name: Check linting
+        run: deno lint --ignore=test.ts
       - name: Run tests
         run: make test

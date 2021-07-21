@@ -1,8 +1,8 @@
 name: Publish Egg
 
 env:
-  DENO_VERSION: 1.6.3
-  EGGS_VERSION: 0.3.4
+  DENO_VERSION: 1.12.1
+  NEST_VERSION: 0.3.8
 
 on:
   release:
@@ -14,11 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: denolib/setup-deno@master
+      - uses: denoland/setup-deno@main
         with:
           deno-version: ${{env.DENO_VERSION}}
 
       - name: Publish module
         run: |
-          deno run -A --unstable https://x.nest.land/eggs@${{env.EGGS_VERSION}}/eggs.ts link ${{ secrets.NESTAPIKEY }}
-          deno run -A --unstable https://x.nest.land/eggs@${{env.EGGS_VERSION}}/eggs.ts publish
+          deno run -A --unstable https://x.nest.land/eggs@${{env.NEST_VERSION}}/eggs.ts link ${{ secrets.NESTAPIKEY }}
+          deno run -A --unstable https://x.nest.land/eggs@${{env.NEST_VERSION}}/eggs.ts publish -Y

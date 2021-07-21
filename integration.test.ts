@@ -12,12 +12,7 @@ const SECRET = "some-secret";
 const ALGORITHM: AlgorithmInput = "HS512";
 const INVALID_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-
-const randomPort = (min = 9000, max = 9999) => {
-  let num = Math.random() * (max - min) + min;
-
-  return Math.floor(num);
-};
+const PORT = 8001;
 
 const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
   return create({ alg: ALGORITHM, typ: "jwt" }, {
@@ -27,9 +22,8 @@ const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
 
 // Spawns an application with middleware instantiated
 const createApplicationAndClient = () => {
-  const port = randomPort();
   const controller = new AbortController();
-  const app = new Application();
+  const app = new Application({ logErrors: false });
 
   app.use(
     jwtMiddleware<Middleware>({
@@ -46,7 +40,7 @@ const createApplicationAndClient = () => {
   return {
     listen: () => {
       return app.listen({
-        port,
+        port: PORT,
         hostname: "localhost",
         signal: controller.signal,
       });
@@ -54,7 +48,7 @@ const createApplicationAndClient = () => {
     controller,
     client: {
       request: (options: RequestInit) => {
-        return fetch(`http://localhost:${port}`, options);
+        return fetch(`http://localhost:${PORT}`, options);
       },
     },
   };
@@ -65,11 +59,10 @@ const tests = [
     name: "error with invalid Authorization",
     async fn() {
       const { controller, client, listen } = createApplicationAndClient();
-      listen();
+      const listenPromise = listen();
 
       const headers = new Headers();
       headers.set("Authorization", "Noth");
-
       const response = await client.request({ headers });
 
       assertEquals(response.status, 401);
@@ -77,13 +70,14 @@ const tests = [
       assertEquals(await response.text(), "Authentication failed");
 
       controller.abort();
+      await listenPromise;
     },
   },
   {
     name: "error with invalid Bearer",
     async fn() {
       const { controller, client, listen } = createApplicationAndClient();
-      listen();
+      const listenPromise = listen();
 
       const headers = new Headers();
       headers.set("Authorization", "Bearer 123");
@@ -92,16 +86,20 @@ const tests = [
 
       assertEquals(response.status, 401);
       assertEquals(response.statusText, "Unauthorized");
-      assertEquals(await response.text(), "The serialization is invalid.");
+      assertEquals(
+        await response.text(),
+        "The serialization of the jwt is invalid.",
+      );
 
       controller.abort();
+      await listenPromise;
     },
   },
   {
     name: "success with valid token",
     async fn() {
       const { controller, client, listen } = createApplicationAndClient();
-      listen();
+      const listenPromise = listen();
 
       const headers = new Headers();
       headers.set("Authorization", `Bearer ${await getJWT()}`);
@@ -112,13 +110,14 @@ const tests = [
       assertEquals(await response.text(), "hello-world");
 
       controller.abort();
+      await listenPromise;
     },
   },
   {
     name: "failure with invalid token",
     async fn() {
       const { controller, client, listen } = createApplicationAndClient();
-      listen();
+      const listenPromise = listen();
 
       const headers = new Headers();
       headers.set("Authorization", `Bearer ${INVALID_JWT}`);
@@ -132,13 +131,14 @@ const tests = [
       );
 
       controller.abort();
+      await listenPromise;
     },
   },
   {
     name: "failure with expired token",
     async fn() {
       const { controller, client, listen } = createApplicationAndClient();
-      listen();
+      const listenPromise = listen();
 
       const headers = new Headers();
       const expiredJwt = await getJWT({
@@ -153,6 +153,7 @@ const tests = [
       assertEquals(await response.text(), "The jwt is expired.");
 
       controller.abort();
+      await listenPromise;
     },
   },
 ];
