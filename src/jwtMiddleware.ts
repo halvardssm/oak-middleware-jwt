@@ -1,5 +1,5 @@
 import {
-  AlgorithmInput,
+  Algorithm,
   Context,
   HTTPMethods,
   Middleware,
@@ -17,16 +17,16 @@ export type ErrorMessagesKeys =
   | "AUTHORIZATION_HEADER_NOT_PRESENT"
   | "AUTHORIZATION_HEADER_INVALID";
 export type ErrorMessages = Partial<Record<ErrorMessagesKeys, string>>;
-export type OnSuccessHandler = (
-  ctx: Context | RouterContext,
+export type OnSuccessHandler<R extends string = string> = (
+  ctx: Context | RouterContext<R>,
   payload: Payload,
 ) => void;
-export type OnFailureHandler = (
-  ctx: Context | RouterContext,
+export type OnFailureHandler<R extends string = string> = (
+  ctx: Context | RouterContext<R>,
   error: Error,
 ) => boolean;
 
-export type { AlgorithmInput, Payload };
+export type { Algorithm, Payload };
 
 export interface JwtMiddlewareOptions {
   /** Custom error messages */
@@ -42,15 +42,19 @@ export interface JwtMiddlewareOptions {
   onSuccess?: OnSuccessHandler;
 
   /** Optional callback for unsuccessfull validation, passes the Context and JwtValidation if the JWT is present in the header.
-	 *
-	 * When not used, will throw HTTPError using custom (or default) messages.
-	 * If you want the failure to be ignored and to call the next middleware, return true.
-	 */
+   *
+   * When not used, will throw HTTPError using custom (or default) messages.
+   * If you want the failure to be ignored and to call the next middleware, return true.
+   */
   onFailure?: OnFailureHandler;
 
   /** See the djwt module for Validation options */
-  key: string;
-  algorithm: AlgorithmInput;
+  key: CryptoKey | null;
+  algorithm: Algorithm;
+}
+
+export class JWTMiddlewareError extends Error {
+  name = this.constructor.name;
 }
 
 const errorMessages: ErrorMessages = {
@@ -64,7 +68,7 @@ const isPattern = (obj: any): obj is Pattern => {
   return typeof obj === "object" && obj.path;
 };
 
-const ignorePath = <T extends Context | RouterContext>(
+const ignorePath = <T extends Context | RouterContext<string>>(
   ctx: T,
   patterns: Array<IgnorePattern>,
 ): boolean => {
@@ -93,10 +97,9 @@ const ignorePath = <T extends Context | RouterContext>(
 };
 
 export const jwtMiddleware = <
-  T extends RouterMiddleware | Middleware = Middleware,
+  T extends RouterMiddleware<string> | Middleware = Middleware,
 >({
   key,
-  algorithm,
   customMessages = {},
   ignorePatterns,
   onSuccess = () => {},
@@ -104,7 +107,7 @@ export const jwtMiddleware = <
 }: JwtMiddlewareOptions): T => {
   Object.assign(customMessages, errorMessages);
 
-  const core: RouterMiddleware = async (ctx, next) => {
+  const core: RouterMiddleware<string> = async (ctx, next) => {
     const onUnauthorized = async (
       jwtValidation: Error,
       isJwtValidationError = false,
@@ -131,7 +134,9 @@ export const jwtMiddleware = <
 
     // No Authorization header
     if (!ctx.request.headers.has("Authorization")) {
-      await onUnauthorized(new Error(errorMessages.ERROR_INVALID_AUTH));
+      await onUnauthorized(
+        new JWTMiddlewareError(errorMessages.ERROR_INVALID_AUTH),
+      );
 
       return;
     }
@@ -140,7 +145,7 @@ export const jwtMiddleware = <
     const authHeader = ctx.request.headers.get("Authorization")!;
     if (!authHeader.startsWith("Bearer ") || authHeader.length <= 7) {
       await onUnauthorized(
-        new Error(errorMessages.AUTHORIZATION_HEADER_INVALID),
+        new JWTMiddlewareError(errorMessages.AUTHORIZATION_HEADER_INVALID),
       );
 
       return;
@@ -148,7 +153,7 @@ export const jwtMiddleware = <
 
     const jwt = authHeader.slice(7);
     try {
-      onSuccess(ctx, await verify(jwt, key, algorithm));
+      onSuccess(ctx, await verify(jwt, key));
       await next();
     } catch (e) {
       await onUnauthorized(e, true);

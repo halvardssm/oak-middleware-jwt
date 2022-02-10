@@ -1,15 +1,19 @@
 import {
-  AlgorithmInput,
+  Algorithm,
   Application,
   assertEquals,
   create,
   getNumericDate,
   Middleware,
-} from "./deps.ts";
-import { jwtMiddleware } from "./mod.ts";
+} from "../deps.ts";
+import { jwtMiddleware } from "../mod.ts";
 
-const SECRET = "some-secret";
-const ALGORITHM: AlgorithmInput = "HS512";
+const SECRET = await crypto.subtle.generateKey(
+  { name: "HMAC", hash: "SHA-512" },
+  true,
+  ["sign", "verify"],
+);
+const ALGORITHM: Algorithm = "HS512";
 const INVALID_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 const PORT = 8001;
@@ -127,7 +131,7 @@ const tests = [
       assertEquals(response.status, 401);
       assertEquals(
         await response.text(),
-        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
+        "The jwt's alg 'HS256' does not match the key's algorithm.",
       );
 
       controller.abort();

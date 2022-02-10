@@ -2,9 +2,9 @@
 
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/halvardssm/oak-middleware-jwt?logo=deno&style=flat-square)](https://github.com/halvardssm/oak-middleware-jwt)
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/halvardssm/oak-middleware-jwt/CI/master?style=flat-square&logo=github)](https://github.com/halvardssm/oak-middleware-jwt/actions?query=branch%3Amaster+workflow%3ACI)
-[![(Deno)](https://img.shields.io/badge/deno-v1.12.1-green.svg?style=flat-square&logo=deno)](https://deno.land)
-[![(Deno)](https://img.shields.io/badge/oak-v8.0.0-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
-[![(Deno)](https://img.shields.io/badge/djwt-v2.2-orange.svg?style=flat-square&logo=deno)](https://github.com/timonson/djwt)
+[![(Deno)](https://img.shields.io/badge/deno-v1.18.2-green.svg?style=flat-square&logo=deno)](https://deno.land)
+[![(Deno)](https://img.shields.io/badge/oak-v10.2.0-orange.svg?style=flat-square&logo=deno)](https://github.com/oakserver/oak)
+[![(Deno)](https://img.shields.io/badge/djwt-v2.4-orange.svg?style=flat-square&logo=deno)](https://github.com/timonson/djwt)
 [![deno doc](https://img.shields.io/badge/deno-doc-blue.svg?style=flat-square&logo=deno)](https://doc.deno.land/https/raw.githubusercontent.com/halvardssm/oak-middleware-jwt/master/mod.ts)
 [![nest badge](https://nest.land/badge-block.svg)](https://nest.land/package/oak-middleware-jwt)
 
@@ -88,6 +88,19 @@ Oak middleware for JWT using Djwt
 - onFailure?: OnFailureHandler; // Optional callback for unsuccessfull
   validation, passes the Context and the Error encountered while validating the
   jwt
+
+## Error Handling
+
+All errors originating from this middleware is of class `JWTMiddlewareError` which is exported. To handle `JWTMiddlewareError`s you can do such:
+
+```ts
+...
+} catch(e){
+  if(e instanceof JWTMiddlewareError){
+    //do something
+  }
+}
+```
 
 ## Migrating from v1.0.0
 

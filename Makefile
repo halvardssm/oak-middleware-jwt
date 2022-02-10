@@ -1,4 +1,4 @@
 test:
-	deno test --allow-net="localhost"
+	deno test --allow-net
 fmt:
 	deno fmt

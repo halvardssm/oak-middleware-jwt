@@ -1,23 +1,27 @@
 import {
-  AlgorithmInput,
+  Algorithm,
   assert,
-  assertThrowsAsync,
+  assertRejects,
   create,
   createHttpError,
   getNumericDate,
   Payload,
   RouterContext,
-} from "./deps.ts";
-import { jwtMiddleware, JwtMiddlewareOptions } from "./mod.ts";
+} from "../deps.ts";
+import { jwtMiddleware, JwtMiddlewareOptions } from "../mod.ts";
 
-const SECRET = "some-secret";
-const ALGORITHM: AlgorithmInput = "HS512";
+const SECRET = await crypto.subtle.generateKey(
+  { name: "HMAC", hash: "SHA-512" },
+  true,
+  ["sign", "verify"],
+);
+const ALGORITHM: Algorithm = "HS512";
 const jwtOptions: JwtMiddlewareOptions = {
   key: SECRET,
   algorithm: ALGORITHM,
 };
 
-const mockContext = (token?: string): RouterContext =>
+const mockContext = (token?: string): RouterContext<string> =>
   ({
     request: {
       headers: new Headers(
@@ -29,7 +33,7 @@ const mockContext = (token?: string): RouterContext =>
     throw: (status: number, msg: string) => {
       throw createHttpError(status, msg);
     },
-  }) as RouterContext;
+  }) as RouterContext<string>;
 
 const mockNext = () => {
   return new Promise<void>((resolve) => {
@@ -52,7 +56,7 @@ const tests = [
 
       const mw = jwtMiddleware({
         ...jwtOptions,
-        onSuccess: (ctx: any, payload: Payload) => {
+        onSuccess: (_ctx: any, payload: Payload) => {
           jwtObj = payload;
         },
       });
@@ -73,7 +77,7 @@ const tests = [
 
       const mw = jwtMiddleware(jwtOptions);
 
-      assertThrowsAsync(
+      await assertRejects(
         async () => await mw(mockContext(mockJwt), mockNext),
         undefined,
         "The jwt is expired.",
@@ -85,7 +89,7 @@ const tests = [
     async fn() {
       const mw = jwtMiddleware(jwtOptions);
 
-      assertThrowsAsync(
+      await assertRejects(
         async () => await mw(mockContext(), mockNext),
         undefined,
         "Authentication failed",
@@ -97,7 +101,7 @@ const tests = [
     async fn() {
       const mw = jwtMiddleware(jwtOptions);
 
-      assertThrowsAsync(
+      await assertRejects(
         async () => await mw(mockContext(""), mockNext),
         undefined,
         "Authentication failed",
@@ -109,7 +113,7 @@ const tests = [
     async fn() {
       const mw = jwtMiddleware(jwtOptions);
 
-      assertThrowsAsync(
+      await assertRejects(
         async () =>
           await mw(
             mockContext(
@@ -118,7 +122,7 @@ const tests = [
             mockNext,
           ),
         undefined,
-        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
+        "The jwt's alg 'HS256' does not match the key's algorithm.",
       );
     },
   },
@@ -178,7 +182,7 @@ const tests = [
         ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
       });
 
-      assertThrowsAsync(async () => await mw(mockContext(), mockNext));
+      await assertRejects(async () => await mw(mockContext(), mockNext));
     },
   },
   {
@@ -217,7 +221,7 @@ const tests = [
         },
       });
 
-      assertThrowsAsync(
+      await assertRejects(
         async () =>
           await mw(
             mockContext(
@@ -226,7 +230,7 @@ const tests = [
             mockNext,
           ),
         undefined,
-        "The jwt's algorithm does not match the specified algorithm 'HS512'.",
+        "The jwt's alg 'HS256' does not match the key's algorithm.",
       );
     },
   },
