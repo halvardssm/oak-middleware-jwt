@@ -56,7 +56,7 @@ const tests = [
 
       const mw = jwtMiddleware({
         ...jwtOptions,
-        onSuccess: (_ctx: any, payload: Payload) => {
+        onSuccess: (_ctx, payload) => {
           jwtObj = payload;
         },
       });
