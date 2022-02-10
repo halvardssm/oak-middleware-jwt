@@ -91,7 +91,8 @@ Oak middleware for JWT using Djwt
 
 ## Error Handling
 
-All errors originating from this middleware is of class `JWTMiddlewareError` which is exported. To handle `JWTMiddlewareError`s you can do such:
+All errors originating from this middleware is of class `JWTMiddlewareError`
+which is exported. To handle `JWTMiddlewareError`s you can do such:
 
 ```ts
 ...

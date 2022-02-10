@@ -2,7 +2,7 @@
   "$schema": "https://x.nest.land/eggs@0.3.8/src/schema.json",
   "name": "oak-middleware-jwt",
   "description": "Oak middleware for JWT validation using djwt",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "stable": true,
   "repository": "https://github.com/halvardssm/oak-middleware-jwt",
   "files": [
