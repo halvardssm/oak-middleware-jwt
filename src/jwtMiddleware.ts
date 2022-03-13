@@ -152,12 +152,8 @@ export const jwtMiddleware = <
     }
 
     const jwt = authHeader.slice(7);
-    try {
-      onSuccess(ctx, await verify(jwt, key));
-      await next();
-    } catch (e) {
-      await onUnauthorized(e, true);
-    }
+    onSuccess(ctx, await verify(jwt, key));
+    await next();
   };
 
   return core as T;
