@@ -1,0 +1,7 @@
+{
+  "tasks": {
+    "test": "deno test --allow-net",
+    "test:unit": "deno test --filter=unit",
+    "test:integration": "deno test --allow-net --filter=integration"
+  }
+}

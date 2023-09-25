@@ -4,7 +4,9 @@ import {
   assertRejects,
   create,
   createHttpError,
+  describe,
   getNumericDate,
+  it,
   Payload,
   RouterContext,
 } from "../deps.ts";
@@ -41,221 +43,188 @@ const mockNext = () => {
   });
 };
 
-const tests = [
-  {
-    name: "Success",
-    async fn() {
-      let jwtObj: Payload = {};
+describe("jwtMiddleware unit test", () => {
+  it("succeeds", async () => {
+    let jwtObj: Payload = {};
 
-      const payload = { test: "test" };
-      const mockJwt = await create(
-        { alg: ALGORITHM, typ: "jwt" },
-        payload,
-        SECRET,
-      );
+    const payload = { test: "test" };
+    const mockJwt = await create(
+      { alg: ALGORITHM, typ: "jwt" },
+      payload,
+      SECRET,
+    );
 
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        onSuccess: (_ctx, payload) => {
-          jwtObj = payload;
-        },
-      });
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      onSuccess: (_ctx, payload) => {
+        jwtObj = payload;
+      },
+    });
 
-      await mw(mockContext(mockJwt), mockNext);
+    await mw(mockContext(mockJwt), mockNext);
 
-      assert(jwtObj.test === payload.test);
-    },
-  },
-  {
-    name: "Failure with expired token",
-    async fn() {
-      const mockJwt = await create(
-        { alg: ALGORITHM, typ: "jwt" },
-        { exp: getNumericDate(new Date(2000, 1, 0)) },
-        SECRET,
-      );
+    assert(jwtObj.test === payload.test);
+  });
 
-      const mw = jwtMiddleware(jwtOptions);
+  it("fails with expired token", async () => {
+    const mockJwt = await create(
+      { alg: ALGORITHM, typ: "jwt" },
+      { exp: getNumericDate(new Date(2000, 1, 0)) },
+      SECRET,
+    );
 
-      await assertRejects(
-        async () => await mw(mockContext(mockJwt), mockNext),
-        undefined,
-        "The jwt is expired.",
-      );
-    },
-  },
-  {
-    name: "No header",
-    async fn() {
-      const mw = jwtMiddleware(jwtOptions);
+    const mw = jwtMiddleware(jwtOptions);
 
-      await assertRejects(
-        async () => await mw(mockContext(), mockNext),
-        undefined,
-        "Authentication failed",
-      );
-    },
-  },
-  {
-    name: "Invalid header",
-    async fn() {
-      const mw = jwtMiddleware(jwtOptions);
+    await assertRejects(
+      async () => await mw(mockContext(mockJwt), mockNext),
+      Error,
+      "The jwt is expired.",
+    );
+  });
 
-      await assertRejects(
-        async () => await mw(mockContext(""), mockNext),
-        undefined,
-        "Authentication failed",
-      );
-    },
-  },
-  {
-    name: "Invalid token",
-    async fn() {
-      const mw = jwtMiddleware(jwtOptions);
+  it("fails with no header", async () => {
+    const mw = jwtMiddleware(jwtOptions);
 
-      await assertRejects(
-        async () =>
-          await mw(
-            mockContext(
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-            ),
-            mockNext,
+    await assertRejects(
+      async () => await mw(mockContext(), mockNext),
+      Error,
+      "Authentication failed",
+    );
+  });
+
+  it("fails with invalid header", async () => {
+    const mw = jwtMiddleware(jwtOptions);
+
+    await assertRejects(
+      async () => await mw(mockContext(""), mockNext),
+      Error,
+      "Authentication failed",
+    );
+  });
+
+  it("fails with invalid token", async () => {
+    const mw = jwtMiddleware(jwtOptions);
+
+    await assertRejects(
+      async () =>
+        await mw(
+          mockContext(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
           ),
-        undefined,
-        "The jwt's alg 'HS256' does not match the key's algorithm.",
-      );
-    },
-  },
-  {
-    name: "Pattern ignore string",
-    async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        ignorePatterns: ["/baz"],
-      }));
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "Pattern ignore regex",
-    async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        ignorePatterns: [/baz/],
-      }));
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "Pattern ignore object string",
-    async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        ignorePatterns: [{ path: "/baz" }],
-      }));
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "Pattern ignore object regex",
-    async fn() {
-      const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
-        ignorePatterns: [{ path: /baz/ }],
-      }));
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "Pattern ignore object string wrong method",
-    async fn() {
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
-      });
-
-      await assertRejects(async () => await mw(mockContext(), mockNext));
-    },
-  },
-  {
-    name: "Pattern ignore object string correct method",
-    async fn() {
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
-      });
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "Pattern ignore multiple",
-    async fn() {
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        ignorePatterns: ["/baz", /buz/, { path: "/biz", methods: ["GET"] }],
-      });
-
-      await mw(mockContext(), mockNext);
-
-      assert(true);
-    },
-  },
-  {
-    name: "onSuccess is not called on invalid jwt",
-    async fn() {
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        onSuccess: () => {
-          assert(false, "onSuccess is not called");
-        },
-      });
-
-      await assertRejects(
-        async () =>
-          await mw(
-            mockContext(
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-            ),
-            mockNext,
-          ),
-        undefined,
-        "The jwt's alg 'HS256' does not match the key's algorithm.",
-      );
-    },
-  },
-  {
-    name: "onFailure is called",
-    async fn() {
-      const mw = jwtMiddleware({
-        ...jwtOptions,
-        onFailure: () => {
-          assert(true, "onFailure is called");
-
-          return false;
-        },
-      });
-
-      await mw(
-        mockContext(
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+          mockNext,
         ),
-        mockNext,
-      );
-    },
-  },
-];
+      Error,
+      "The jwt's alg 'HS256' does not match the key's algorithm.",
+    );
+  });
 
-for await (const test of tests) {
-  Deno.test(test);
-}
+  it("pattern ignore string", async () => {
+    const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      ignorePatterns: ["/baz"],
+    }));
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("pattern ignore regex", async () => {
+    const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      ignorePatterns: [/baz/],
+    }));
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("pattern ignore object string", async () => {
+    const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      ignorePatterns: [{ path: "/baz" }],
+    }));
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("pattern ignore object regex", async () => {
+    const mw = jwtMiddleware(Object.assign({}, jwtOptions, {
+      ignorePatterns: [{ path: /baz/ }],
+    }));
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("fails with pattern ignore object string wrong method", async () => {
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      ignorePatterns: [{ path: "/baz", methods: ["PUT"] }],
+    });
+
+    await assertRejects(async () => await mw(mockContext(), mockNext));
+  });
+
+  it("succeeds with pattern ignore object string correct method", async () => {
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      ignorePatterns: [{ path: "/baz", methods: ["GET"] }],
+    });
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("succeeds with pattern ignore multiple", async () => {
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      ignorePatterns: ["/baz", /buz/, { path: "/biz", methods: ["GET"] }],
+    });
+
+    await mw(mockContext(), mockNext);
+
+    assert(true);
+  });
+
+  it("fails with onSuccess is not called on invalid jwt", async () => {
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      onSuccess: () => {
+        assert(false, "onSuccess is not called");
+      },
+    });
+
+    await assertRejects(
+      async () =>
+        await mw(
+          mockContext(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+          ),
+          mockNext,
+        ),
+      Error,
+      "The jwt's alg 'HS256' does not match the key's algorithm.",
+    );
+  });
+
+  it("fails with onFailure is called", async () => {
+    const mw = jwtMiddleware({
+      ...jwtOptions,
+      onFailure: () => {
+        assert(true, "onFailure is called");
+
+        return false;
+      },
+    });
+
+    await mw(
+      mockContext(
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+      ),
+      mockNext,
+    );
+  });
+});

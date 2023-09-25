@@ -1,9 +1,13 @@
 import {
+  afterEach,
   Algorithm,
   Application,
   assertEquals,
+  beforeEach,
   create,
+  describe,
   getNumericDate,
+  it,
   Middleware,
 } from "../deps.ts";
 import { jwtMiddleware } from "../mod.ts";
@@ -25,7 +29,7 @@ const getJWT = ({ expirationDate }: { expirationDate?: Date } = {}) => {
 };
 
 // Spawns an application with middleware instantiated
-const createApplicationAndClient = () => {
+const createApplicationAndClient = async () => {
   const controller = new AbortController();
   const app = new Application({ logErrors: false });
 
@@ -41,130 +45,95 @@ const createApplicationAndClient = () => {
     ctx.response.status = 200;
   });
 
+  const listen = app.listen({
+    port: PORT,
+    hostname: "localhost",
+    signal: controller.signal,
+  });
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 1000);
+  });
+
   return {
-    listen: () => {
-      return app.listen({
-        port: PORT,
-        hostname: "localhost",
-        signal: controller.signal,
-      });
-    },
+    listen,
     controller,
-    client: {
-      request: (options: RequestInit) => {
-        return fetch(`http://localhost:${PORT}`, options);
-      },
+    request: (options: RequestInit) => {
+      return fetch(`http://localhost:${PORT}`, options);
     },
   };
 };
 
-const tests = [
-  {
-    name: "error with invalid Authorization",
-    async fn() {
-      const { controller, client, listen } = createApplicationAndClient();
-      const listenPromise = listen();
+describe("jwtMiddleware integration test", () => {
+  let testCtx: Awaited<ReturnType<typeof createApplicationAndClient>>;
 
-      const headers = new Headers();
-      headers.set("Authorization", "Noth");
-      const response = await client.request({ headers });
+  beforeEach(async () => {
+    testCtx = await createApplicationAndClient();
+  });
 
-      assertEquals(response.status, 401);
-      assertEquals(response.statusText, "Unauthorized");
-      assertEquals(await response.text(), "Authentication failed");
+  afterEach(async () => {
+    testCtx.controller.abort();
+    await testCtx.listen;
+  });
 
-      controller.abort();
-      await listenPromise;
-    },
-  },
-  {
-    name: "error with invalid Bearer",
-    async fn() {
-      const { controller, client, listen } = createApplicationAndClient();
-      const listenPromise = listen();
+  it("error with invalid Authorization", async () => {
+    const headers = new Headers();
+    headers.set("Authorization", "Noth");
+    const response = await testCtx.request({ headers });
 
-      const headers = new Headers();
-      headers.set("Authorization", "Bearer 123");
+    assertEquals(response.status, 401);
+    assertEquals(response.statusText, "Unauthorized");
+    assertEquals(await response.text(), "Authentication failed");
+  });
 
-      const response = await client.request({ headers });
+  it("error with invalid Bearer", async () => {
+    const headers = new Headers();
+    headers.set("Authorization", "Bearer 123");
 
-      assertEquals(response.status, 401);
-      assertEquals(response.statusText, "Unauthorized");
-      assertEquals(
-        await response.text(),
-        "The serialization of the jwt is invalid.",
-      );
+    const response = await testCtx.request({ headers });
 
-      controller.abort();
-      await listenPromise;
-    },
-  },
-  {
-    name: "success with valid token",
-    async fn() {
-      const { controller, client, listen } = createApplicationAndClient();
-      const listenPromise = listen();
+    assertEquals(response.status, 401);
+    assertEquals(response.statusText, "Unauthorized");
+    assertEquals(
+      await response.text(),
+      "The serialization of the jwt is invalid.",
+    );
+  });
 
-      const headers = new Headers();
-      headers.set("Authorization", `Bearer ${await getJWT()}`);
+  it("success with valid token", async () => {
+    const headers = new Headers();
+    headers.set("Authorization", `Bearer ${await getJWT()}`);
 
-      const response = await client.request({ headers });
+    const response = await testCtx.request({ headers });
 
-      assertEquals(response.status, 200);
-      assertEquals(await response.text(), "hello-world");
+    assertEquals(response.status, 200);
+    assertEquals(await response.text(), "hello-world");
+  });
 
-      controller.abort();
-      await listenPromise;
-    },
-  },
-  {
-    name: "failure with invalid token",
-    async fn() {
-      const { controller, client, listen } = createApplicationAndClient();
-      const listenPromise = listen();
+  it("failure with invalid token", async () => {
+    const headers = new Headers();
+    headers.set("Authorization", `Bearer ${INVALID_JWT}`);
 
-      const headers = new Headers();
-      headers.set("Authorization", `Bearer ${INVALID_JWT}`);
+    const response = await testCtx.request({ headers });
 
-      const response = await client.request({ headers });
+    assertEquals(response.status, 401);
+    assertEquals(
+      await response.text(),
+      "The jwt's alg 'HS256' does not match the key's algorithm.",
+    );
+  });
 
-      assertEquals(response.status, 401);
-      assertEquals(
-        await response.text(),
-        "The jwt's alg 'HS256' does not match the key's algorithm.",
-      );
+  it("failure with expired token", async () => {
+    const headers = new Headers();
+    const expiredJwt = await getJWT({
+      expirationDate: new Date(2000, 0, 0),
+    });
 
-      controller.abort();
-      await listenPromise;
-    },
-  },
-  {
-    name: "failure with expired token",
-    async fn() {
-      const { controller, client, listen } = createApplicationAndClient();
-      const listenPromise = listen();
+    headers.set("Authorization", `Bearer ${expiredJwt}`);
 
-      const headers = new Headers();
-      const expiredJwt = await getJWT({
-        expirationDate: new Date(2000, 0, 0),
-      });
+    const response = await testCtx.request({ headers });
 
-      headers.set("Authorization", `Bearer ${expiredJwt}`);
-
-      const response = await client.request({ headers });
-
-      assertEquals(response.status, 401);
-      assertEquals(await response.text(), "The jwt is expired.");
-
-      controller.abort();
-      await listenPromise;
-    },
-  },
-];
-
-for await (const test of tests) {
-  test.name = `integration: ${test.name}`;
-  Deno.test(test);
-}
-
-export {};
+    assertEquals(response.status, 401);
+    assertEquals(await response.text(), "The jwt is expired.");
+  });
+});
